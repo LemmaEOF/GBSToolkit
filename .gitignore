@@ -117,4 +117,6 @@ dmypy.json
 .idea/
 
 # Project outputs and testing
-out/
+*/out/
+*/sample_project.gbsproj
+*/modified_sample_project.gbsproj

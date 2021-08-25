@@ -45,15 +45,15 @@ def dump_text(project_file: str):
 
         # Dump scene init text
         script = scene["script"]
-        contents = []
+        dialogue = []
         for event in script:
-            iter_event(event, contents, current_scene + " init")
-        if len(contents) > 0:
+            iter_event(event, dialogue, current_scene + " init", 0)
+        if len(dialogue) > 0:
             file_path = "out/scripts/" + current_scene
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
             with open(file_path + "/init.txt", mode="w", encoding="utf-8") as file:
-                file.write("".join(contents))
+                file.write("".join(dialogue))
 
         # Dump actor text
         actors = scene["actors"]
@@ -69,29 +69,29 @@ def dump_text(project_file: str):
             current_name = actor["name"].replace('/', '-').replace('\\', '-').replace(':', '-')
             if current_name == "":
                 current_name = "Actor " + str(actors.index(actor))
-            contents = []
+            dialogue = []
             script_contents = []
             script = actor["script"]
             if len(script) > 0:
                 for event in script:
-                    iter_event(event, script_contents, current_scene + " actor " + current_name + " interact")
+                    iter_event(event, script_contents, current_scene + " actor " + current_name + " interact", 0)
                 if len(script_contents) > 0:
-                    contents.append("# On interact: \n\n")
-                    contents.extend(script_contents)
+                    dialogue.append("# On interact: \n\n")
+                    dialogue.extend(script_contents)
             start_contents = []
             start_script = actor["startScript"]
             if len(start_script) > 0:
                 for event in start_script:
-                    iter_event(event, start_contents, current_scene + " actor " + current_name + " init")
+                    iter_event(event, start_contents, current_scene + " actor " + current_name + " init", 0)
                 if len(start_contents) > 0:
-                    contents.append("# On initialize: \n\n")
-                    contents.extend(start_contents)
-            if len(contents) > 0:
+                    dialogue.append("# On initialize: \n\n")
+                    dialogue.extend(start_contents)
+            if len(dialogue) > 0:
                 file_path = "out/scripts/" + current_scene + "/" + "actors"
                 if not os.path.exists(file_path):
                     os.makedirs(file_path)
                 with open(file_path + "/" + current_name + ".txt", mode="w", encoding="utf-8") as file:
-                    file.write("".join(contents))
+                    file.write("".join(dialogue))
 
         # Dump trigger text
         triggers = scene["triggers"]
@@ -99,40 +99,41 @@ def dump_text(project_file: str):
             current_name = trigger["name"].replace('/', '-').replace('\\', '-').replace(':', '-')
             if current_name == "":
                 current_name = "Trigger " + str(triggers.index(trigger))
-            contents = []
+            dialogue = []
             script = trigger["script"]
             for event in script:
-                iter_event(event, contents, current_scene + " trigger " + current_name, 0)
-            if len(contents) > 0:
+                iter_event(event, dialogue, current_scene + " trigger " + current_name, 0)
+            if len(dialogue) > 0:
                 file_path = "out/scripts/" + current_scene + "/" + "triggers"
                 if not os.path.exists(file_path):
                     os.makedirs(file_path)
                 with open(file_path + "/" + current_name + ".txt", mode="w", encoding="utf-8") as file:
-                    file.write("".join(contents))
+                    file.write("".join(dialogue))
+    project.close()
     project.close()
 
 
-def iter_event(event: dict, contents: list, location: str, current_depth: int):
+def iter_event(event: dict, dialogue: list, location: str, current_depth: int):
     global sprites, available_actors, emotes
     if "children" in event:  # text events can't have children so safe to go deeper
         # TODO: mark that the node happens? might be important for branches
         has_text = False
-        header_point = len(contents)
+        header_point = len(dialogue)
         children = event["children"]
         current_depth += 1
         for k, v in children.items():
-            before_point = len(contents)
+            before_point = len(dialogue)
             for e in v:
-                iter_event(e, contents, location, current_depth)
-            if len(contents) != before_point:
+                iter_event(e, dialogue, location, current_depth)
+            if len(dialogue) != before_point:
                 if not has_text:
-                    contents.insert(header_point, current_depth * "  " + "## Branch Condition, depth " +
+                    dialogue.insert(header_point, current_depth * "  " + "## Branch Condition, depth " +
                                     str(current_depth) + "\n\n")
                     before_point += 1
                     has_text = True
-                contents.insert(before_point, current_depth * "  " + "### Case " + k + "\n\n")
-        if len(contents) != header_point:
-            contents.append(current_depth * "  " + "--End branch condition, depth " + str(current_depth) + "\n\n")
+                dialogue.insert(before_point, current_depth * "  " + "### Case " + k + "\n\n")
+        if len(dialogue) != header_point:
+            dialogue.append(current_depth * "  " + "--End branch condition, depth " + str(current_depth) + "\n\n")
     elif event["command"] == "EVENT_ACTOR_EMOTE":
         args = event["args"]
         actor_id = args["actorId"]
@@ -147,7 +148,7 @@ def iter_event(event: dict, contents: list, location: str, current_depth: int):
             print("ERROR parsing emote in " + location + ": Missing actor for UUID " + actor_id +
                   "! Make sure the actor isn't null in GB Studio!")
             actor = "NULL"
-        contents.append("<" + actor + " " + emotes[int(args["emoteId"])] + ">\n\n")
+        dialogue.append("<" + actor + " " + emotes[int(args["emoteId"])] + ">\n\n")
     elif event["command"] == "EVENT_TEXT":
         args = event["args"]
         avatar = ""
@@ -158,21 +159,21 @@ def iter_event(event: dict, contents: list, location: str, current_depth: int):
                     print("ERROR parsing dialogue in " + location + ": Missing avatar name for UUID " + actor_id +
                           "! Make sure the sprite isn't null in GB Studio!")
                     print("Errored dialogue: '''" + str(args["text"]) + "'''")
-                    contents.append("NULL:\n")
+                    dialogue.append("NULL:\n")
                     avatar = "NULL"
                 else:
-                    contents.append(sprites[actor_id] + ":\n")
+                    dialogue.append(sprites[actor_id] + ":\n")
                     avatar = sprites[actor_id]
         text = args["text"]
         if isinstance(text, list):
             for t in text:
                 if text.index(t) != 0 and avatar != "":
-                    contents.append(avatar + ":\n")
-                contents.append(t.replace('Â…', '…'))
-                contents.append("\n\n")
+                    dialogue.append(avatar + ":\n")
+                dialogue.append(t.replace('Â…', '…'))
+                dialogue.append("\n\n")
         else:
-            contents.append(text.replace('Â…', '…'))
-            contents.append("\n\n")
+            dialogue.append(text.replace('Â…', '…'))
+            dialogue.append("\n\n")
         # TODO: mark other sorts of events - moves, shows/hides, etc.?
         # TODO: other 1252-to-utf8 conversions because we. live. in. hell.
 

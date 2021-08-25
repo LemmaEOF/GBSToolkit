@@ -9,11 +9,11 @@ add new dialogue. **This project is a work in progress.**
 
 ## Current Features
 - Dump all the dialogue in your project into separate text files for review
+- Dumping and loading variable names to/from a text file
 
 ## Planned Features
 - Import dialogue in a text file into the project JSON
-- Dumping and editing variable names.
-- Alternative visual text editor interface with automatic dialogue previews.
+- Alternative visual text editor interface with automatic dialogue previews
 
 ## Requirements
 - Tested with GB Studio v2.0 beta 5. Other versions may not work properly.
