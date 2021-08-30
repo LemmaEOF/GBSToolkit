@@ -41,7 +41,7 @@ def dump_text(project_file: str):
 
     scenes = contents["scenes"]
     for scene in scenes:
-        current_scene = scene["name"]
+        current_scene = scene["name"].replace('/', '-').replace('\\', '-').replace(':', '-')
 
         # Dump scene init text
         script = scene["script"]
