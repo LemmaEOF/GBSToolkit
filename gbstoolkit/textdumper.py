@@ -72,14 +72,20 @@ def dump_text(project_file: str):
         #  bc one is deep & I need everything prepped early
         available_actors.clear()
         for actor in actors:
-            name = re.sub(r'[\/\\\*\:\?\"\;\|\,\[\]\&\<\>\=]', '-', scene["name"])
+            if "name" in actor:
+                name = re.sub(r'[\/\\\*\:\?\"\;\|\,\[\]\&\<\>\=]', '-', actor["name"])
+            else:
+                name = ""
             if name in illegal_filenames:
                 name += "-"
             if name == "":
                 name = "Actor " + str(actors.index(actor))
             available_actors[actor["id"]] = name
         for actor in actors:
-            current_name = re.sub(r'[\/\\\*\:\?\"\;\|\,\[\]\&\<\>\=]', '-', actor["name"])
+            if "name" in actor:
+                current_name = re.sub(r'[\/\\\*\:\?\"\;\|\,\[\]\&\<\>\=]', '-', actor["name"])
+            else:
+                current_name = ""
             if platform.system() == "Windows" and current_name in illegal_filenames:
                 print("WARNING! Actor name '" + current_name + "' is reserved on Windows. Renaming!")
                 print("For more information, see this video: https://youtu.be/bC6tngl0PTI")
@@ -113,7 +119,10 @@ def dump_text(project_file: str):
         # Dump trigger text
         triggers = scene["triggers"]
         for trigger in triggers:
-            current_name = re.sub(r'[\/\\\*\:\?\"\;\|\,\[\]\&\<\>\=]', '-', trigger["name"])
+            if "name" in trigger:
+                current_name = re.sub(r'[\/\\\*\:\?\"\;\|\,\[\]\&\<\>\=]', '-', trigger["name"])
+            else:
+                current_name = ""
             if platform.system() == "Windows" and current_name in illegal_filenames:
                 print("WARNING! Trigger name '" + current_name + "' is reserved on Windows. Renaming!")
                 print("For more information, see this video: https://youtu.be/bC6tngl0PTI")

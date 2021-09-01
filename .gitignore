@@ -118,5 +118,4 @@ dmypy.json
 
 # Project outputs and testing
 */out/
-*/sample_project.gbsproj
-*/modified_sample_project.gbsproj
+*.gbsproj
