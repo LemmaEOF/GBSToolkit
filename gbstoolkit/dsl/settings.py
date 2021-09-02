@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import Dict, List
 from uuid import UUID
 
 from enums import Direction
@@ -49,3 +49,36 @@ class Settings(Serializable):
             "startDirection": serialize(self.start_direction),
             "playerSpriteSheetId": serialize(self.player_sprite_sheet_id)
         }
+
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "Settings":
+        start_scene_id = UUID(obj["startSceneId"])
+        start_x = obj["startX"]
+        start_y = obj["startY"]
+        show_collisions = obj["showCollisions"]
+        show_connections = obj["showConnections"]
+        world_scroll_x = obj["worldScrollX"]
+        world_scroll_y = obj["worldScrollY"]
+        zoom = obj["zoom"]
+        custom_colors_enabled = obj["customColorsEnabled"]
+        default_background_palette_ids = [UUID(i) if len(i) == 36 else i for i in obj["defaultBackgroundPaletteIds"]]
+        id_read = obj["defaultSpritePaletteId"]
+        default_sprite_palette_id = UUID(id_read) if len(id_read) == 36 else id_read
+        id_read = obj["defaultUIPaletteId"]
+        default_ui_palette_id = UUID(id_read) if len(id_read) == 36 else id_read
+        custom_colors_white = obj["customColorsWhite"]
+        custom_colors_light = obj["customColorsLight"]
+        custom_colors_dark = obj["customColorsDark"]
+        custom_colors_black = obj["customColorsBlack"]
+        start_direction = Direction.deserialize(obj["direction"])
+        player_sprite_sheet_id = UUID(obj["playerSpriteSheetId"])
+        return Settings(start_scene_id=start_scene_id, start_x=start_x, start_y=start_y,
+                        show_collisions=show_collisions, show_connections=show_connections,
+                        world_scroll_x=world_scroll_x, world_scroll_y=world_scroll_y, zoom=zoom,
+                        custom_colors_enabled=custom_colors_enabled,
+                        default_background_palette_ids=default_background_palette_ids,
+                        default_sprite_palette_id=default_sprite_palette_id,
+                        default_ui_palette_id=default_ui_palette_id,
+                        custom_colors_white=custom_colors_white, custom_colors_light=custom_colors_light,
+                        custom_colors_dark=custom_colors_dark, custom_colors_black=custom_colors_black,
+                        start_direction=start_direction, player_sprite_sheet_id=player_sprite_sheet_id)

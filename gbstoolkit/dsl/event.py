@@ -53,3 +53,13 @@ class CustomEvent(Serializable):
             "actors": serialize(self.actors),
             "script": serialize(self.script)
         }
+
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "CustomEvent":
+        id = UUID(obj["id"])
+        name = obj["name"]
+        description = obj["description"]
+        variables = {k: Variable.deserialize(v) for k, v in obj["variables"]}
+        actors = {k: Variable.deserialize(v) for k, v in obj["actors"]}
+        script = [Event.deserialize(i) for i in obj["script"]]
+        return CustomEvent(id=id, name=name, description=description, variables=variables, actors=actors, script=script)

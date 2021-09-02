@@ -67,8 +67,12 @@ class ActorID(Serializable):
 
 @dataclass
 class Variable(Serializable):
-    id: int
+    id: str
     name: str
 
     def serialize(self) -> JsonSafe:
-        return {"id": str(self.id), "name": self.name}
+        return {"id": self.id, "name": self.name}
+
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "Variable":
+        return Variable(id=obj["id"], name=obj["name"])

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import Dict, List
 from uuid import UUID
 
 from enums import Direction, MovementType, SpriteType
@@ -47,3 +47,25 @@ class Actor(Serializable):
             "hit3Script": serialize(self.hit3_script)
         }
 
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "Actor":
+        id = UUID(obj["id"])
+        name = obj["name"],
+        sprite_sheet_id = UUID(obj["id"])
+        x = obj["x"],
+        y = obj["y"],
+        movement_type = MovementType.deserialize(obj["movementType"])
+        direction = Direction.deserialize(obj["direction"])
+        move_speed = obj["move_speed"],
+        anim_speed = obj["anim_speed"],
+        collision_group = obj["collisionGroup"]
+        script = [Event.deserialize[i] for i in obj["script"]]
+        start_script = [Event.deserialize[i] for i in obj["startScript"]]
+        update_script = [Event.deserialize[i] for i in obj["updateScript"]]
+        hit1_script = [Event.deserialize[i] for i in obj["hit1Script"]]
+        hit2_script = [Event.deserialize[i] for i in obj["hit2Script"]]
+        hit3_script = [Event.deserialize[i] for i in obj["hit3Script"]]
+        return Actor(id=id, name=name, sprite_sheet_id=sprite_sheet_id, x=x, y=y, movement_type=movement_type,
+                     direction=direction, move_speed=move_speed, anim_speed=anim_speed, collision_group=collision_group,
+                     script=script, start_script=start_script, update_script=update_script, hit1_script=hit1_script,
+                     hit2_script=hit2_script, hit3_script=hit3_script)

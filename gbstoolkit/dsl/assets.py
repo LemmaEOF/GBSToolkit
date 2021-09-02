@@ -30,6 +30,19 @@ class Background(Serializable):
             "_v": self.timestamp.timestamp()
         }
 
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "Background":
+        id = UUID(obj["id"])
+        name = obj["name"]
+        width = obj["width"]
+        height = obj["height"]
+        image_width = obj["imageWidth"]
+        image_height = obj["imageHeight"]
+        filename = obj["filename"]
+        timestamp = datetime.fromtimestamp(obj["_v"])
+        return Background(id=id, name=name, width=width, height=height, image_width=image_width,
+                          image_height=image_height, filename=filename, timestamp=timestamp)
+
 
 @dataclass
 class SpriteSheet(Serializable):  # TODO: gonna break entirely in v3! be ready!
@@ -50,6 +63,15 @@ class SpriteSheet(Serializable):  # TODO: gonna break entirely in v3! be ready!
             "_v": self.timestamp.timestamp()
         }
 
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "SpriteSheet":
+        id = UUID(obj["id"])
+        name = obj["name"]
+        num_frames = obj["numFrames"]
+        filename = obj["filename"]
+        timestamp = datetime.fromtimestamp(obj["_v"])
+        return SpriteSheet(id=id, name=name, num_frames=num_frames, filename=filename, timestamp=timestamp)
+
 
 @dataclass
 class Song(Serializable):
@@ -67,3 +89,12 @@ class Song(Serializable):
             "filename": self.filename,
             "_v": self.timestamp.timestamp()
         }
+
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "Song":
+        id = UUID(obj["id"])
+        name = obj["name"]
+        filename = obj["filename"]
+        settings = obj["settings"]
+        timestamp = datetime.fromtimestamp(obj["_v"])
+        return Song(id=id, name=name, filename=filename, settings=settings, timestamp=timestamp)

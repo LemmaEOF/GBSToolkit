@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import Dict, List
 from uuid import UUID
 
 from event import Event
@@ -26,3 +26,14 @@ class Trigger(Serializable):
             # "trigger": self.trigger,
             "script": serialize(self.script)
         }
+
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "Trigger":
+        id = UUID(obj["id"])
+        x = obj["x"]
+        y = obj["y"]
+        width = obj["width"]
+        height = obj["height"]
+        # trigger = obj["trigger"]
+        script = [Event.deserialize(i) for i in obj["script"]]
+        return Trigger(id=id, x=x, y=y, width=width, height=height, script=script)

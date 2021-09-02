@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import Dict, List
 
 from assets import Background, SpriteSheet, Song
 from event import CustomEvent
@@ -22,7 +22,7 @@ class Project(Serializable):
     custom_events: List[CustomEvent]
     music: List[Song]
     variables: List[Variable]
-    settings: List[Settings]
+    settings: Settings
 
     def serialize(self) -> JsonSafe:
         return {
@@ -39,3 +39,21 @@ class Project(Serializable):
             "variables": serialize(self.variables),
             "settings": serialize(self.settings)
         }
+
+    @staticmethod
+    def deserialize(obj: Dict[str, JsonSafe]) -> "Project":
+        name = obj["name"]
+        author = obj["author"]
+        version = obj["_version"]
+        release = obj["_release"]
+        scenes = [Scene.deserialize(i) for i in obj["scenes"]]
+        backgrounds = [Background.deserialize(i) for i in obj["backgrounds"]]
+        sprite_sheets = [SpriteSheet.deserialize(i) for i in obj["spriteSheets"]]
+        palettes = [Palette.deserialize(i) for i in obj["palettes"]]
+        custom_events = [CustomEvent.deserialize(i) for i in obj["customEvents"]]
+        music = [Song.deserialize(i) for i in obj["music"]]
+        variables = [Variable.deserialize(i) for it in obj["variables"]]
+        settings = Settings.deserialize(obj["settings"])
+        return Project(name=name, author=author, version=version, release=release, scenes=scenes,
+                       backgrounds=backgrounds, sprite_sheets=sprite_sheets, palettes=palettes,
+                       custom_events=custom_events, music=music, variables=variables, settings=settings)
