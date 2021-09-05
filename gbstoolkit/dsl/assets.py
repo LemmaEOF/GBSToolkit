@@ -68,9 +68,10 @@ class SpriteSheet(Serializable):  # TODO: gonna break entirely in v3! be ready!
         id = UUID(obj["id"])
         name = obj["name"]
         num_frames = obj["numFrames"]
+        type = SpriteSheetType.deserialize(obj["type"])
         filename = obj["filename"]
         timestamp = datetime.fromtimestamp(obj["_v"])
-        return SpriteSheet(id=id, name=name, num_frames=num_frames, filename=filename, timestamp=timestamp)
+        return SpriteSheet(id=id, name=name, num_frames=num_frames, type=type, filename=filename, timestamp=timestamp)
 
 
 @dataclass

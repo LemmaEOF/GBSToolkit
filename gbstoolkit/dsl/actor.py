@@ -32,6 +32,7 @@ class Actor(Serializable):
             "id": serialize(self.id),
             "name": self.name,
             "spriteSheetId": serialize(self.sprite_sheet_id),
+            "spriteType": serialize(self.sprite_type),
             "x": self.x,
             "y": self.y,
             "movementType": serialize(self.movement_type),
@@ -50,22 +51,23 @@ class Actor(Serializable):
     @staticmethod
     def deserialize(obj: Dict[str, JsonSafe]) -> "Actor":
         id = UUID(obj["id"])
-        name = obj["name"],
+        name = obj["name"]
         sprite_sheet_id = UUID(obj["id"])
-        x = obj["x"],
-        y = obj["y"],
+        sprite_type = SpriteType.deserialize(obj["spriteType"])
+        x = obj["x"]
+        y = obj["y"]
         movement_type = MovementType.deserialize(obj["movementType"])
         direction = Direction.deserialize(obj["direction"])
-        move_speed = obj["move_speed"],
-        anim_speed = obj["anim_speed"],
+        move_speed = obj["move_speed"]
+        anim_speed = obj["anim_speed"]
         collision_group = obj["collisionGroup"]
-        script = [Event.deserialize[i] for i in obj["script"]]
-        start_script = [Event.deserialize[i] for i in obj["startScript"]]
-        update_script = [Event.deserialize[i] for i in obj["updateScript"]]
-        hit1_script = [Event.deserialize[i] for i in obj["hit1Script"]]
-        hit2_script = [Event.deserialize[i] for i in obj["hit2Script"]]
-        hit3_script = [Event.deserialize[i] for i in obj["hit3Script"]]
-        return Actor(id=id, name=name, sprite_sheet_id=sprite_sheet_id, x=x, y=y, movement_type=movement_type,
+        script = [Event.deserialize(i) for i in obj["script"]]
+        start_script = [Event.deserialize(i) for i in obj["startScript"]]
+        update_script = [Event.deserialize(i) for i in obj["updateScript"]]
+        hit1_script = [Event.deserialize(i) for i in obj["hit1Script"]]
+        hit2_script = [Event.deserialize(i) for i in obj["hit2Script"]]
+        hit3_script = [Event.deserialize(i) for i in obj["hit3Script"]]
+        return Actor(id=id, name=name, sprite_sheet_id=sprite_sheet_id, sprite_type=sprite_type, x=x, y=y, movement_type=movement_type,
                      direction=direction, move_speed=move_speed, anim_speed=anim_speed, collision_group=collision_group,
                      script=script, start_script=start_script, update_script=update_script, hit1_script=hit1_script,
                      hit2_script=hit2_script, hit3_script=hit3_script)
