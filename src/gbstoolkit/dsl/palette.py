@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 from uuid import UUID
 
-from marshalling import JsonSafe, serialize, Serializable
+from .marshalling import JsonSafe, serialize, Serializable
 
 PaletteID = Union[str, UUID]
 
@@ -21,17 +21,36 @@ class Palette(Serializable):
         }
 
     @staticmethod
+    def parse_id(id: Optional[str]) -> Optional[PaletteID]:
+        if id is None:
+            return None
+        uuidtest = id.strip('{}').replace('-', '')
+        if len(uuidtest) == 32:
+            return UUID(id)
+        else:
+            return id
+
+    @staticmethod
     def deserialize(obj: Dict[str, JsonSafe]) -> "Palette":
-        id = UUID(obj["id"])
+        id = Palette.parse_id(obj["id"])
         name = obj["name"]
         colors = obj["colors"]
         if "defaultName" in obj:
-            default_name = obj["defaultName"]
-            default_colors = obj["defaultColors"]
-            return DefaultPalette(id=id, name=name, colors=colors, default_name=default_name,
-                                  default_colors=default_colors)
+            return DefaultPalette(
+                id=id,
+                name=name,
+                colors=colors,
+                default_name=obj["defaultName"],
+                default_colors=obj["defaultColors"]
+            )
         else:
-            return Palette(id=id, name=name, colors=colors)
+            return Palette(
+                id=id,
+                name=name,
+                colors=colors
+            )
+
+
 
 
 @dataclass

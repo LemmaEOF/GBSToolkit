@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from command import Command, COMMAND_TYPES
-from marshalling import Variable, JsonSafe, serialize, Serializable
+from .datatypes import NamedKey
+from .command import Command, COMMAND_TYPES
+from .marshalling import JsonSafe, serialize, Serializable
 
 
 @dataclass
@@ -23,11 +24,14 @@ class Event(Serializable):
 
     @staticmethod
     def deserialize(evt: Dict[str, JsonSafe]) -> "Event":
-        args = evt["args"] if "args" in evt else None
-        children = {k: [Event.deserialize(i) for i in v] for k, v in evt["children"]} if "children" in evt else None
-        return Event(UUID(evt["id"]), COMMAND_TYPES[evt["command"]], args, children)
+        return Event(
+            id=UUID(evt["id"]),
+            command=COMMAND_TYPES[evt["command"]] if evt["command"] in COMMAND_TYPES else None,  # FIXME later!
+            args=evt["args"] if "args" in evt else None,
+            children={k: [Event.deserialize(i) for i in v] for k, v in evt["children"].items()} if "children" in evt else None
+        )
 
-    def format(self):
+    def format(self) -> str:
         return self.command.format(self.args, self.children)
 
     @staticmethod
@@ -40,8 +44,8 @@ class CustomEvent(Serializable):
     id: UUID
     name: str
     description: str
-    variables: Dict[str, Variable]
-    actors: Dict[str, Variable]
+    variables: Dict[str, NamedKey]
+    actors: Dict[str, NamedKey]
     script: List[Event]
 
     def serialize(self) -> JsonSafe:
@@ -56,10 +60,11 @@ class CustomEvent(Serializable):
 
     @staticmethod
     def deserialize(obj: Dict[str, JsonSafe]) -> "CustomEvent":
-        id = UUID(obj["id"])
-        name = obj["name"]
-        description = obj["description"]
-        variables = {k: Variable.deserialize(v) for k, v in obj["variables"]}
-        actors = {k: Variable.deserialize(v) for k, v in obj["actors"]}
-        script = [Event.deserialize(i) for i in obj["script"]]
-        return CustomEvent(id=id, name=name, description=description, variables=variables, actors=actors, script=script)
+        return CustomEvent(
+            id=UUID(obj["id"]),
+            name=obj["name"],
+            description=obj["description"],
+            variables={k: NamedKey.deserialize(v) for k, v in obj["variables"].items()},
+            actors={k: NamedKey.deserialize(v) for k, v in obj["actors"].items()},
+            script=[Event.deserialize(i) for i in obj["script"]]
+        )

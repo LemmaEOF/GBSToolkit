@@ -1,12 +1,23 @@
 from enum import Enum
 
-from marshalling import JsonSafe, Serializable
 
+class SerializableEnum(Enum):
 
-class SerializableEnum(Enum, Serializable):
-
-    def serialize(self) -> JsonSafe:
+    def serialize(self) -> str:
         return self.value
+
+
+class ActorProperty(SerializableEnum):
+    X_POS = "xpos"
+    Y_POS = "ypos"
+    DIRECTION = "direction"
+    MOVE_SPEED = "moveSpeed"
+    ANIM_SPEED = "animSpeed"
+    FRAME = "frame"
+
+    @staticmethod
+    def deserialize(obj: str) -> "ActorProperty":
+        return ActorProperty(obj)
 
 
 class Direction(SerializableEnum):
@@ -17,7 +28,7 @@ class Direction(SerializableEnum):
 
     @staticmethod
     def deserialize(obj: str) -> "Direction":
-        return Direction.__members__[obj]
+        return Direction(obj)
 
 
 class MovementType(SerializableEnum):
@@ -27,28 +38,31 @@ class MovementType(SerializableEnum):
 
     @staticmethod
     def deserialize(obj: str) -> "MovementType":
-        return MovementType.__members__[obj]
+        return MovementType(obj)
 
 
-class SceneType(SerializableEnum):
-    POINT_AND_CLICK = "POINTNCLICK"
-    PLATFORMING = "PLATFORM"
-    SHOOT_EM_UP = "SHMUP"
-    TOP_DOWN = "TOPDOWN"
+class SceneType(SerializableEnum):  # TODO: swap names in V3!
+    TOP_DOWN = "0"  # "TOPDOWN"
+    PLATFORMING = "1"  # "PLATFORM"
+    ADVENTURE = "2" # "ADVENTURE"
+    SHOOT_EM_UP = "3"  # "SHMUP"
+    POINT_AND_CLICK = "4"  # "POINTNCLICK"
+    # LOGO = "LOGO"
 
     @staticmethod
     def deserialize(obj: str) -> "SceneType":
-        return SceneType.__members__[obj]
+        return SceneType(obj)
 
 
 class SpriteSheetType(SerializableEnum):
     STATIC = "static"
     ANIMATED = "animated"
+    ACTOR = "actor"
     ACTOR_ANIMATED = "actor_animated"
 
     @staticmethod
     def deserialize(obj: str) -> "SpriteSheetType":
-        return SpriteSheetType.__members__[obj]
+        return SpriteSheetType(obj)
 
 
 class SpriteType(SerializableEnum):
@@ -57,4 +71,4 @@ class SpriteType(SerializableEnum):
 
     @staticmethod
     def deserialize(obj: str) -> "SpriteType":
-        return SpriteType.__members__[obj]
+        return SpriteType(obj)

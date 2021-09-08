@@ -14,6 +14,7 @@ emotes = ["shock", "question", "heart", "pause", "angry", "sweat", "note", "slee
 illegal_filenames = ["CON", "PRN", "AUX", "CLOCK$", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6",
     "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"]
 
+
 def dump_text(project_file: str):
     """
     Grabs all the text (and some events) from a GB Studio project
