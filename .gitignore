@@ -121,3 +121,5 @@ out/
 */out/
 *.gbsproj
 samples/
+*.json
+*.kdl

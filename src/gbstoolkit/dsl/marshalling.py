@@ -26,7 +26,7 @@ def serialize(obj: Any) -> JsonSafe:
         return str(obj)
     elif type(obj) == dict:
         # A dict! Might not be safe yet. Map it to be sure!
-        return {str(k): serialize(v) for k, v in obj}
+        return {str(k): serialize(v) for k, v in obj.items()}
     elif type(obj) == list:
         # A list! Might not be safe yet. Map it to be sure!
         return[serialize(i) for i in obj]

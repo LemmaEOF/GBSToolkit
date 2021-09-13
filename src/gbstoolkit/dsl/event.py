@@ -1,17 +1,21 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+import uuid
+
+from kdl import Node
 
 from .datatypes import NamedKey
-from .command import Command, COMMAND_TYPES
+from .command import Command, COMMAND_TYPES, KEYWORDS
 from .marshalling import JsonSafe, serialize, Serializable
+from .util import NameUtil
 
 
 @dataclass
 class Event(Serializable):
     id: UUID
     command: Command
-    args: Optional[Dict[str, Any]]
+    args: Optional[Dict[str, JsonSafe]]
     children: Optional[Dict[str, List["Event"]]]
 
     def serialize(self) -> Dict[str, JsonSafe]:
@@ -31,12 +35,29 @@ class Event(Serializable):
             children={k: [Event.deserialize(i) for i in v] for k, v in evt["children"].items()} if "children" in evt else None
         )
 
-    def format(self) -> str:
-        return self.command.format(self.args, self.children)
+    def format(self, names: NameUtil) -> Node:
+        outputs = self.command.format(self.args, names)
+        node_children = None
+        if self.children is not None:
+            node_children = []
+            for k, v in self.children.items():
+                children_list = [i.format(names) for i in v]
+                node_children.append(Node(name=k, properties=None, arguments=None, children=children_list))
+        properties = outputs[0] if outputs[0] is not None else {}
+        properties["__uuid__"] = str(self.id)
+        return Node(name=self.command.keyword(), properties=properties, arguments=outputs[1], children=node_children)
 
     @staticmethod
-    def parse(text: str) -> "Event":
-        return NotImplemented
+    def parse(node: Node, names: NameUtil) -> "Event":
+        children = None
+        if node.children is not None:
+            children = {}
+            for child in node.children:
+                children[child.name] = [Event.parse(i, names) for i in child.children]
+        command = KEYWORDS[node.name]
+        id = UUID(node.properties["__uuid__"]) if "__uuid__" in node.properties else uuid.uuid4()
+        args = command.parse(node.properties, node.arguments, names)
+        return Event(id=id, command=command, args=args, children=children)
 
 
 @dataclass
