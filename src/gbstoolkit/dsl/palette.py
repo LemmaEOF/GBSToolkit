@@ -51,8 +51,6 @@ class Palette(Serializable):
             )
 
 
-
-
 @dataclass
 class DefaultPalette(Palette):
     default_name: str

@@ -3,8 +3,11 @@ from datetime import datetime
 from typing import Dict, Any
 from uuid import UUID
 
+from kdl import Node
+
 from .enums import SpriteSheetType
 from .marshalling import JsonSafe, serialize, Serializable
+from .util import prop_node, map_nodes
 
 
 @dataclass
@@ -43,6 +46,33 @@ class Background(Serializable):
             timestamp=datetime.fromtimestamp(obj["_v"] / 1000) if "_v" in obj else datetime.now()
         )
 
+    def format(self) -> Node:
+        children = [
+            prop_node("id", serialize(self.id)),
+            prop_node("width", self.width),
+            prop_node("height", self.height),
+            prop_node("imageWidth", self.image_width),
+            prop_node("imageHeight", self.image_height),
+            prop_node("filename", self.filename),
+            prop_node("timesamp", self.timestamp.timestamp() * 1000)
+        ]
+        return Node(self.name, None, None, children)
+
+    @staticmethod
+    def parse(node: Node) -> "Background":
+        contents = map_nodes(node.children)
+        return Background(
+            id=UUID(contents["id"]),
+            name=node.name,
+            width=contents["width"],
+            height=contents["height"],
+            image_width=contents["imageWidth"],
+            image_height=contents["imageHeight"],
+            filename=contents["filename"],
+            timestamp=datetime.fromtimestamp(contents["timestamp"] / 1000) if "timestamp" in contents
+            else datetime.now()
+        )
+
 
 @dataclass
 class SpriteSheet(Serializable):  # TODO: gonna break entirely in v3! be ready!
@@ -74,6 +104,29 @@ class SpriteSheet(Serializable):  # TODO: gonna break entirely in v3! be ready!
             timestamp=datetime.fromtimestamp(obj["_v"] / 1000) if "_v" in obj else datetime.now()
         )
 
+    def format(self) -> Node:
+        children = [
+            prop_node("id", serialize(self.id)),
+            prop_node("numFrames", self.num_frames),
+            prop_node("type", self.type.serialize()),
+            prop_node("filename", self.filename),
+            prop_node("timesamp", self.timestamp.timestamp() * 1000)
+        ]
+        return Node(self.name, None, None, children)
+
+    @staticmethod
+    def parse(node: Node) -> "SpriteSheet":
+        contents = map_nodes(node.children)
+        return SpriteSheet(
+            id=UUID(contents["id"]),
+            name=node.name,
+            num_frames=contents["numFrames"],
+            type=SpriteSheetType.deserialize(contents["type"]),
+            filename=contents["filename"],
+            timestamp=datetime.fromtimestamp(contents["timestamp"] / 1000) if "timestamp" in contents
+            else datetime.now()
+        )
+
 
 @dataclass
 class Song(Serializable):
@@ -100,4 +153,25 @@ class Song(Serializable):
             filename=obj["filename"],
             settings=obj["settings"],
             timestamp=datetime.fromtimestamp(obj["_v"] / 1000) if "_v" in obj else datetime.now()
+        )
+
+    def format(self) -> Node:
+        children = [
+            prop_node("id", serialize(self.id)),
+            prop_node("filename", self.filename),
+            # prop_node("settings", ) TODO: can't do this bc I don't know what settings is
+            prop_node("timesamp", self.timestamp.timestamp() * 1000)
+        ]
+        return Node(self.name, None, None, children)
+
+    @staticmethod
+    def parse(node: Node) -> "Song":
+        contents = map_nodes(node.children)
+        return Song(
+            id=UUID(contents["id"]),
+            name=node.name,
+            filename=contents["filename"],
+            settings={},  # TODO: can't do this bc I don't know what settings is
+            timestamp=datetime.fromtimestamp(contents["timestamp"] / 1000) if "timestamp" in contents
+            else datetime.now()
         )

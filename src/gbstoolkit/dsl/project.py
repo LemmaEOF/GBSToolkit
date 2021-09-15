@@ -7,6 +7,65 @@ from .marshalling import JsonSafe, serialize, Serializable
 from .palette import Palette
 from .scene import Scene
 from .settings import Settings
+from .util import NameUtil
+
+
+class ProjectNameUtil(NameUtil):
+    def __init__(self):
+        self.id_to_background = {}
+        self.background_to_id = {}
+        self.id_to_scene = {}
+        self.scene_to_id = {}
+        self.id_to_song = {}
+        self.song_to_id = {}
+        self.id_to_sprite = {}
+        self.sprite_to_id = {}
+
+    def add_background(self, id: str, name: str):
+        self.id_to_background[id] = name
+        self.background_to_id[name] = id
+
+    def add_scene(self, id: str, name: str):
+        self.id_to_scene[id] = name
+        self.scene_to_id[name] = id
+
+    def add_song(self, id: str, name: str):
+        self.id_to_song[id] = name
+        self.song_to_id[name] = id
+
+    def add_sprite(self, id: str, name: str):
+        self.id_to_sprite[id] = name
+        self.sprite_to_id[name] = id
+
+    def actor_for_id(self, id: str) -> str:
+        return NotImplemented
+
+    def id_for_actor(self, name: str) -> str:
+        return NotImplemented
+
+    def background_for_id(self, id: str) -> str:
+        return self.id_to_background[id]
+
+    def id_for_background(self, name: str) -> str:
+        return self.background_to_id[name]
+
+    def scene_for_id(self, id: str) -> str:
+        return self.id_to_scene[id]
+
+    def id_for_scene(self, name: str) -> str:
+        return self.scene_to_id[name]
+
+    def song_for_id(self, id: str) -> str:
+        return self.id_to_song[id]
+
+    def id_for_song(self, name: str) -> str:
+        return self.song_to_id[name]
+
+    def sprite_for_id(self, id: str) -> str:
+        return self.id_to_sprite[id]
+
+    def id_for_sprite(self, name: str) -> str:
+        return self.sprite_to_id[name]
 
 
 @dataclass
@@ -63,4 +122,16 @@ class Project(Serializable):
             variables={i["id"]: i["name"] for i in obj["variables"]},
             settings=Settings.deserialize(obj["settings"])
         )
+
+    def format(self):  # TODO: return type(s)
+        names = ProjectNameUtil()
+        for background in self.backgrounds:
+            names.add_background(str(background.id), background.name)
+        for scene in self.scenes:
+            names.add_scene(str(scene.id), scene.name)  # TODO: sanitize for safety!
+        for song in self.music:
+            names.add_song(str(song.id), song.name)
+        for sprite in self.sprite_sheets:
+            names.add_sprite(str(sprite.id), sprite.name)
+        # TODO: rest of formatting here!
 

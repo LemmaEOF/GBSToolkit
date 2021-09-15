@@ -8,6 +8,52 @@ from .event import Event
 from .marshalling import JsonSafe, serialize, Serializable
 from .palette import Palette
 from .trigger import Trigger
+from .util import NameUtil
+
+
+class SceneNameUtil(NameUtil):
+    def __init__(self, parent: NameUtil):
+        self.parent = parent
+        self.id_to_actor = {}
+        self.actor_to_id = {}
+
+    def add_actor(self, id: str, name: str):
+        self.id_to_actor[id] = name
+        self.actor_to_id[name] = id
+
+    def actor_for_id(self, id: str) -> str:
+        if id == "player" or id == "$self$" or id.isdecimal():
+            return id
+        return self.id_to_actor[id]
+
+    def id_for_actor(self, name: str) -> str:
+        if name == "player" or name == "$self$" or name.isdecimal():
+            return name
+        return self.actor_to_id[name]
+
+    def background_for_id(self, id: str) -> str:
+        return self.parent.background_for_id(id)
+
+    def id_for_background(self, name: str) -> str:
+        return self.parent.id_for_background(name)
+
+    def scene_for_id(self, id: str) -> str:
+        return self.parent.scene_for_id(id)
+
+    def id_for_scene(self, name: str) -> str:
+        return self.parent.id_for_scene(name)
+
+    def song_for_id(self, id: str) -> str:
+        return self.parent.song_for_id(id)
+
+    def id_for_song(self, name: str) -> str:
+        return self.parent.id_for_song(name)
+
+    def sprite_for_id(self, id: str) -> str:
+        return self.parent.sprite_for_id(id)
+
+    def id_for_sprite(self, name: str) -> str:
+        return self.parent.id_for_sprite(name)
 
 
 @dataclass

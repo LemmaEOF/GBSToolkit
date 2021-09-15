@@ -4,6 +4,7 @@ from uuid import UUID
 
 from .enums import ActorProperty, Direction
 from .marshalling import JsonSafe, serialize, Serializable
+from .util import NameUtil
 
 
 @dataclass
@@ -55,7 +56,7 @@ class OwnedProperty(Serializable):
     property: ActorProperty
 
     def serialize(self) -> JsonSafe:
-        return serialize(self.actor + "." + serialize(self.property))
+        return self.actor.serialize() + ":" + self.property.serialize()
 
     @staticmethod
     def deserialize(prop: str) -> "OwnedProperty":
@@ -65,10 +66,21 @@ class OwnedProperty(Serializable):
             property=ActorProperty.deserialize(split[1])
         )
 
+    @staticmethod
+    def format(obj: str, names: NameUtil) -> str:
+        prop =  OwnedProperty.deserialize(obj)
+        return names.actor_for_id(prop.actor.serialize()) + ":" + prop.property.serialize()
+
+    @staticmethod
+    def parse(obj: str, names: NameUtil) -> str:
+        split = obj.split(':')
+        return names.id_for_actor(split[0]) + ":" + split[1]
+
 
 T = TypeVar("T", int, Serializable)
 
 
+# TODO: This is pretty much just kinda expensive type checking and conversion, simplify?
 @dataclass
 class UnionArgument(Serializable, Generic[T]):
     type: str
@@ -83,13 +95,13 @@ class UnionArgument(Serializable, Generic[T]):
     @staticmethod
     def deserialize(obj: Dict[str, JsonSafe]) -> "UnionArgument":
         type = obj["type"]
-        if type == "property":
+        if type == "property":  # "84a068f6-ccd4-4b63-a78f-d4787ed25d87:direction"
             value = OwnedProperty.deserialize(obj["value"])
-        elif type == "variable":
+        elif type == "variable":  # "$5$"
             value = str(obj["value"])  # TODO: deserialization context for defined variables? JSON doesn't care
-        elif type == "direction":
+        elif type == "direction":  # "up", "down", "left", or "right"
             value = Direction.deserialize(obj["value"])
-        elif type == "number":
+        elif type == "number":  # raw number
             value = int(obj["value"])
         else:
             raise ValueError("Unexpected type `" + type + "` for union argument! Please report this so I can fix it!")
@@ -97,3 +109,24 @@ class UnionArgument(Serializable, Generic[T]):
             type=type,
             value=value
         )
+
+    @staticmethod
+    def format(obj: Dict[str, JsonSafe], names: NameUtil) -> Union[str, int]:
+        if obj["type"] == "variable":
+            return "$" + obj["value"] + "$"
+        elif obj["type"] == "property":
+            return OwnedProperty.format(obj["value"], names)
+        else:  # TODO: any other important conditions here?
+            return obj["value"]
+
+    @staticmethod
+    def parse(obj: Union[str, int], names: NameUtil) -> Dict[str, JsonSafe]:
+        if type(obj) == int:
+            return {"type": "number", "value": obj}
+        else:
+            if obj[0] == "$" and obj[-1] == "$":
+                return {"type": "variable", "value": obj[1:-1]}
+            elif ':' in obj:
+                return {"type": "property", "value": OwnedProperty.parse(obj, names)}
+            else:
+                return {"type": "direction", "value": Direction.deserialize(obj)}

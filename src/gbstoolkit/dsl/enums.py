@@ -19,6 +19,15 @@ class ActorProperty(SerializableEnum):
     def deserialize(obj: str) -> "ActorProperty":
         return ActorProperty(obj)
 
+class AutoMovementType(SerializableEnum):
+    STATIC = "static"
+    RANDOM_WALK = "randomWalk"
+    FACE_INTERACTION = "faceInteraction"
+
+    @staticmethod
+    def deserialize(obj: str) -> "AutoMovementType":
+        return AutoMovementType(obj)
+
 
 class Direction(SerializableEnum):
     UP = "up"
@@ -31,14 +40,14 @@ class Direction(SerializableEnum):
         return Direction(obj)
 
 
-class MovementType(SerializableEnum):
-    STATIC = "static"
-    RANDOM_WALK = "randomWalk"
-    FACE_INTERACTION = "faceInteraction"
+class MoveType(SerializableEnum):
+    HORIZONTAL = "horizontal"
+    VERTICAL = "vertical"
+    DIAGONAL = "diagonal"
 
     @staticmethod
-    def deserialize(obj: str) -> "MovementType":
-        return MovementType(obj)
+    def deserialize(obj: str) -> "MoveType":
+        return MoveType(obj)
 
 
 class SceneType(SerializableEnum):  # TODO: swap names in V3!

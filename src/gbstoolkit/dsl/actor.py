@@ -2,9 +2,12 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 from uuid import UUID
 
-from .enums import Direction, MovementType, SpriteType
+from kdl import Document
+
+from .enums import Direction, AutoMovementType, SpriteType
 from .event import Event
 from .marshalling import JsonSafe, serialize, Serializable
+from .util import NameUtil, prop_node, map_nodes
 
 
 @dataclass
@@ -13,9 +16,10 @@ class Actor(Serializable):
     name: str
     sprite_sheet_id: UUID
     sprite_type: SpriteType
+    frame: int
     x: int
     y: int
-    movement_type: MovementType
+    movement_type: AutoMovementType
     direction: Direction
     move_speed: int
     anim_speed: int
@@ -34,6 +38,7 @@ class Actor(Serializable):
             "name": self.name,
             "spriteSheetId": serialize(self.sprite_sheet_id),
             "spriteType": serialize(self.sprite_type),
+            "frame": self.frame,
             "x": self.x,
             "y": self.y,
             "movementType": serialize(self.movement_type),
@@ -57,15 +62,16 @@ class Actor(Serializable):
         return Actor(
             id=UUID(obj["id"]),
             name=obj["name"] if "name" in obj else "",
-            sprite_sheet_id=UUID(obj["id"]),
+            sprite_sheet_id=UUID(obj["spriteSheetId"]),
             sprite_type=SpriteType.deserialize(obj["spriteType"]),
+            frame=obj["frame"],
             x=obj["x"],
             y=obj["y"],
-            movement_type=MovementType.deserialize(obj["movementType"])
-            if "movementType" in obj else MovementType.STATIC,
+            movement_type=AutoMovementType.deserialize(obj["movementType"])
+            if "movementType" in obj else AutoMovementType.STATIC,
             direction=Direction.deserialize(obj["direction"]),
-            move_speed=obj["move_speed"] if "move_speed" in obj else 3,
-            anim_speed=obj["anim_speed"] if "move_speed" in obj else 3,
+            move_speed=obj["moveSpeed"] if "moveSpeed" in obj else 3,
+            anim_speed=obj["animSpeed"] if "moveSpeed" in obj else 3,
             collision_group=obj["collisionGroup"],
             notes=obj["notes"] if "notes" in obj else None,
             script=[Event.deserialize(i) for i in obj["script"]] if "script" in obj else [],
@@ -74,4 +80,82 @@ class Actor(Serializable):
             hit1_script=[Event.deserialize(i) for i in obj["hit1Script"]] if "hit1Script" in obj else [],
             hit2_script=[Event.deserialize(i) for i in obj["hit2Script"]] if "hit2Script" in obj else [],
             hit3_script=[Event.deserialize(i) for i in obj["hit3Script"]] if "hit3Script" in obj else []
+        )
+
+    def format(self, names: NameUtil) -> Dict[str, Document]:
+        meta = Document(preserve_property_order=True)
+        meta.extend([
+            prop_node("id", self.id),
+            prop_node("name", self.name),
+            prop_node("spriteSheet", names.sprite_for_id(serialize(self.sprite_sheet_id))),
+            prop_node("spriteType", self.sprite_type.serialize()),
+            prop_node("startFrame", self.frame),
+            prop_node("x", self.x),
+            prop_node("y", self.y),
+            prop_node("movementType", self.movement_type.serialize()),
+            prop_node("direction", self.direction),
+            prop_node("moveSpeed", self.move_speed),
+            prop_node("animSpeed", self.anim_speed),
+            prop_node("collisionGroup", self.collision_group)
+        ])
+        if self.notes is not None:
+            meta.append(prop_node("notes", self.notes))
+        docs = {"meta": meta}
+        if len(self.script) > 0:
+            script = Document(preserve_property_order=True)
+            script.extend([Event.format(i, names) for i in self.script])
+            docs["interact"] = script
+        if len(self.start_script) > 0:
+            script = Document(preserve_property_order=True)
+            script.extend([Event.format(i, names) for i in self.start_script])
+            docs["init"] = script
+        if len(self.update_script) > 0:
+            script = Document(preserve_property_order=True)
+            script.extend([Event.format(i, names) for i in self.update_script])
+            docs["update"] = script
+        if len(self.hit1_script) > 0:
+            script = Document(preserve_property_order=True)
+            script.extend([Event.format(i, names) for i in self.hit1_script])
+            docs["hit-1"] = script
+        if len(self.hit2_script) > 0:
+            script = Document(preserve_property_order=True)
+            script.extend([Event.format(i, names) for i in self.hit2_script])
+            docs["hit-2"] = script
+        if len(self.hit3_script) > 0:
+            script = Document(preserve_property_order=True)
+            script.extend([Event.format(i, names) for i in self.hit3_script])
+            docs["hit-3"] = script
+        return docs
+
+    @staticmethod
+    def parse(docs: Dict[str, Document], names: NameUtil) -> "Actor":
+        meta = docs["meta"]
+        contents = map_nodes(meta)
+        interact = [Event.parse(i, names) for i in docs["interact"]] if "interact" in docs else []
+        init = [Event.parse(i, names) for i in docs["init"]] if "init" in docs else []
+        update = [Event.parse(i, names) for i in docs["update"]] if "update" in docs else []
+        hit_1 = [Event.parse(i, names) for i in docs["hit-1"]] if "hit-1" in docs else []
+        hit_2 = [Event.parse(i, names) for i in docs["hit-2"]] if "hit-2" in docs else []
+        hit_3 = [Event.parse(i, names) for i in docs["hit-3"]] if "hit-3" in docs else []
+        return Actor(
+            id=UUID(contents["id"]),
+            name=contents["name"] if "name" in contents else "",
+            sprite_sheet_id=UUID(contents["spriteSheetId"]),
+            sprite_type=SpriteType.deserialize(contents["spriteType"]),
+            frame=contents["frame"],
+            x=contents["x"],
+            y=contents["y"],
+            movement_type=AutoMovementType.deserialize(contents["movementType"])
+            if "movementType" in contents else AutoMovementType.STATIC,
+            direction=Direction.deserialize(contents["direction"]),
+            move_speed=contents["moveSpeed"] if "moveSpeed" in contents else 3,
+            anim_speed=contents["animSpeed"] if "moveSpeed" in contents else 3,
+            collision_group=contents["collisionGroup"],
+            notes=contents["notes"] if "notes" in contents else None,
+            script=interact,
+            start_script=init,
+            update_script=update,
+            hit1_script=hit_1,
+            hit2_script=hit_2,
+            hit3_script=hit_3
         )

@@ -2,16 +2,19 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Dict, List, Optional, Tuple, Union
 from uuid import UUID
 
+from kdl import Node
+
 from .datatypes import ActorID, UnionArgument
-from .enums import Direction
-from .marshalling import JsonSafe
-from .util import NameUtil
+from .enums import Direction, MoveType
+from .marshalling import JsonSafe, serialize
+from .util import NameUtil, NodeData
 
 COMMAND_TYPES: Dict[str, "Command"] = {}  # Fills in automatically by subclassing Command! woooo
 
 KEYWORDS: Dict[str, "Command"] = {}
 
 
+# Should only ever autoregister Command instances, so if not then we've got a looot more problems on our hands
 class AutoRegister(ABCMeta):
     def __init__(cls, name, bases, clsdict):
         if len(cls.mro()) == 4 and "name" in clsdict and "keyword" in clsdict:
@@ -48,14 +51,14 @@ class Command(ABC, metaclass=AutoRegister):
     def children_names() -> Optional[List[str]]:
         return None
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
         return NotImplemented
 
     @staticmethod
     @abstractmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         return NotImplemented
 
 
@@ -72,13 +75,13 @@ class ActorCollisionsDisableCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        return None, [names.actor_for_id(args["actorId"])]
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return {"actorId": names.id_for_actor(arguments[0])}
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0])}
 
 
 class ActorCollisionsEnableCommand(Command):
@@ -94,13 +97,13 @@ class ActorCollisionsEnableCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        return None, [names.actor_for_id(args["actorId"])]
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return {"actorId": names.id_for_actor(arguments[0])}
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0])}
 
 
 class ActorEmoteCommand(Command):
@@ -114,15 +117,15 @@ class ActorEmoteCommand(Command):
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
-        return {"actorId": ActorID, "emoteId": int}
-
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        return None, [names.actor_for_id(args["actorId"]), args["emoteId"]]
+        return {"actorId": ActorID, "emoteId": str}
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return {"actorId": names.id_for_actor(arguments[0]), "emoteId": int(arguments[1])}
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), args["emoteId"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "emoteId": data.args[1]}
 
 
 class ActorGetDirectionCommand(Command):
@@ -138,13 +141,13 @@ class ActorGetDirectionCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "direction": str}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        return None, [names.actor_for_id(args["actorId"]), args["direction"]]
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), args["direction"]])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return {"actorId": names.id_for_actor(arguments[0]), "direction": arguments[1]}
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "direction": data.args[1]}
 
 
 class ActorGetPositionCommand(Command):
@@ -160,13 +163,17 @@ class ActorGetPositionCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "vectorX": str, "VectorY": str}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        return None, [names.actor_for_id(args["actorId"]), args["vectorX"], args["vectorY"]]
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), args["vectorX"], args["vectorY"]])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return {"actorId": names.id_for_actor(arguments[0]), "vectorX": arguments[1], "vectorY": arguments[2]}
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+            "actorId": names.id_for_actor(data.args[0]),
+            "vectorX": data.args[1],
+            "vectorY": data.args[2]
+        }
 
 
 class ActorHideCommand(Command):
@@ -182,13 +189,15 @@ class ActorHideCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+            "actorId": names.id_for_actor(data.args[0])
+        }
 
 
 class ActorInvokeCommand(Command):
@@ -198,19 +207,21 @@ class ActorInvokeCommand(Command):
 
     @staticmethod
     def keyword() -> str:
-        return "invokeScript"
+        return "interactWith"
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+            "actorId": names.id_for_actor(data.args[0])
+        }
 
 
 class ActorMoveRelativeCommand(Command):
@@ -224,15 +235,31 @@ class ActorMoveRelativeCommand(Command):
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
-        return {"actorId": ActorID, "x": int, "y": int}  # x and y range -31 to 31
-
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+        # x and y range -31 to 31
+        return {"actorId": ActorID, "x": int, "y": int, "moveType": MoveType, "useCollisions": bool}
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(
+            {"type": serialize(args["moveType"]), "collisions": args["useCollisions"]},
+            [names.actor_for_id(args["actorId"]), args["x"], args["y"]]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        if data.props is not None:
+            type = MoveType.deserialize(data.props["type"])
+            collisions = data.props["collisions"]
+        else:
+            type = MoveType.DIAGONAL
+            collisions = False
+        return {
+            "actorId": names.id_for_actor(data.args[0]),
+            "x": data.args[1],
+            "y": data.args[2],
+            "moveType": type.serialize(),
+            "useCollisions": collisions
+        }
 
 
 class ActorMoveToCommand(Command):
@@ -246,15 +273,41 @@ class ActorMoveToCommand(Command):
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
-        return {"actorId": ActorID, "x": UnionArgument[int], "y": UnionArgument[int]}  # x 0-30, y 0-31
-
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+        # x and y 0-255
+        return {
+            "actorId": ActorID,
+            "x": UnionArgument[int],
+            "y": UnionArgument[int],
+            "moveType": MoveType,
+            "useCollisions": bool
+        }
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(
+            {"type": serialize(args["moveType"]), "collisions": args["useCollisions"]},
+            [
+                names.actor_for_id(args["actorId"]),
+                UnionArgument.format(args["x"], names),
+                UnionArgument.format(args["y"], names)
+            ]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        if data.props is not None:
+            type = MoveType.deserialize(data.props["type"])
+            collisions = data.props["collisions"]
+        else:
+            type = MoveType.DIAGONAL
+            collisions = False
+        return {
+            "actorId": names.id_for_actor(data.args[0]),
+            "x": UnionArgument.parse(data.args[1], names),
+            "y": UnionArgument.parse(data.args[2], names),
+            "moveType": type.serialize(),
+            "useCollisions": collisions
+        }
 
 
 class ActorPushCommand(Command):
@@ -270,13 +323,13 @@ class ActorPushCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"continue": bool}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(args, None)
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return data.props
 
 
 class ActorSetAnimateCommand(Command):
@@ -292,13 +345,13 @@ class ActorSetAnimateCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "animate": bool}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), args["animate"]])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "animate": data.args[1]}
 
 
 class ActorSetAnimationSpeedCommand(Command):
@@ -314,13 +367,13 @@ class ActorSetAnimationSpeedCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "animSpeed": Union[None, int]}  # range null and 0-4
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), args["animSpeed"]])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "animSpeed": data.args[1]}
 
 
 class ActorSetDirectionCommand(Command):
@@ -336,13 +389,13 @@ class ActorSetDirectionCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "direction": UnionArgument[Direction]}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), UnionArgument.format(args["direction"], names)])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "direction": UnionArgument.parse(data.args[1], names)}
 
 
 class ActorSetFrameCommand(Command):
@@ -358,13 +411,13 @@ class ActorSetFrameCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "frame": UnionArgument[int]}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), UnionArgument.format(args["frame"], names)])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "frame": UnionArgument.parse(data.args[1], names)}
 
 
 class ActorSetMovementSpeedCommand(Command):
@@ -380,13 +433,13 @@ class ActorSetMovementSpeedCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "speed": int}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), args["speed"]])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "speed": data.args[1]}
 
 
 class ActorSetPositionCommand(Command):
@@ -402,13 +455,24 @@ class ActorSetPositionCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "x": UnionArgument[int], "y": UnionArgument[int]}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(
+            None,
+            [
+                names.actor_for_id(args["actorId"]),
+                UnionArgument.format(args["x"], names),
+                UnionArgument.format(args["y"], names)
+            ]
+        )
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+            "actorId": names.id_for_actor(data.args[0]),
+            "x": UnionArgument.parse(data.args[1], names),
+            "y": UnionArgument.parse(data.args[2], names)
+        }
 
 
 class ActorSetPositionRelativeCommand(Command):
@@ -424,13 +488,13 @@ class ActorSetPositionRelativeCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "x": int, "y": int}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), args["x"], args["y"]])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "x": data.args[1], "y": data.args[2]}
 
 
 class ActorSetSpriteCommand(Command):
@@ -446,13 +510,13 @@ class ActorSetSpriteCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID, "spriteSheetId": UUID}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"]), names.sprite_for_id(args["spriteSheetId"])])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0]), "spriteSheetId": names.id_for_sprite(data.args[1])}
 
 
 class ActorShowCommand(Command):
@@ -468,13 +532,13 @@ class ActorShowCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0])}
 
 
 class ActorStopUpdateScriptCommand(Command):
@@ -490,13 +554,13 @@ class ActorStopUpdateScriptCommand(Command):
     def required_args() -> Optional[Dict[str, type]]:
         return {"actorId": ActorID}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"actorId": names.id_for_actor(data.args[0])}
 
 
 class TextDialogueCommand(Command):
@@ -506,16 +570,33 @@ class TextDialogueCommand(Command):
 
     @staticmethod
     def keyword() -> str:
-        return "say"
+        return "dialogue"
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
         return {"text": Union[str, List[str]], "avatarId": Optional[UUID]}
 
-    @classmethod
-    def format(cls, args: Dict[str, JsonSafe], names: NameUtil) -> Tuple[Optional[Dict[str, JsonSafe]], Optional[List[JsonSafe]]]:
-        pass
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        text = args["text"]
+        node_args = [names.sprite_for_id(args["avatarId"])] if "avatarId" in args else []
+        if type(text) == str:
+            children = None
+            node_args.append(text)
+        else:
+            children = [Node("textbox", None, [i], None) for i in text]
+        ret = NodeData(None, node_args, children)
+        return ret
 
     @staticmethod
-    def parse(properties: Optional[Dict[str, JsonSafe]], arguments: Optional[List[JsonSafe]], names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        if data.children is not None:
+            text = [i.arguments[0].replace('\t', '') for i in data.children]
+            avatar_id = data.args[0] if data.args is not None else None
+        else:
+            text = data.args[-1].replace('\t', '')
+            avatar_id = data.args[0] if len(data.args) > 1 else None
+        if avatar_id is not None:
+            return {"avatarId": names.id_for_sprite(avatar_id), "text": text}
+        else:
+            return {"text": text}

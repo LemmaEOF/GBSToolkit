@@ -17,7 +17,8 @@ add new dialogue. **This project is a work in progress.**
 
 ## Requirements
 - Tested with GB Studio v2.0 beta 5. Other versions may not work properly.
-- Python 3.5 or higher.
+- Python 3.6 or higher.
+- TaTsu 5.6.1 or higher.
 
 ## Licensing and Contribution
 Contributions are more than welcome, and GBS Toolkit is publicly available

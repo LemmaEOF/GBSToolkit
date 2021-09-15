@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 import uuid
 
@@ -8,7 +8,7 @@ from kdl import Node
 from .datatypes import NamedKey
 from .command import Command, COMMAND_TYPES, KEYWORDS
 from .marshalling import JsonSafe, serialize, Serializable
-from .util import NameUtil
+from .util import NameUtil, NodeData, ParseError, FormatError
 
 
 @dataclass
@@ -32,31 +32,37 @@ class Event(Serializable):
             id=UUID(evt["id"]),
             command=COMMAND_TYPES[evt["command"]] if evt["command"] in COMMAND_TYPES else None,  # FIXME later!
             args=evt["args"] if "args" in evt else None,
-            children={k: [Event.deserialize(i) for i in v] for k, v in evt["children"].items()} if "children" in evt else None
+            children={k: [Event.deserialize(i) for i in v] for k, v in evt["children"].items()} if "children" in evt
+            else None
         )
 
     def format(self, names: NameUtil) -> Node:
-        outputs = self.command.format(self.args, names)
-        node_children = None
+        data = self.command.format(self.args, names)
+        node_children = data.children
         if self.children is not None:
+            if data.children is not None:
+                raise FormatError("event", self, "")
             node_children = []
             for k, v in self.children.items():
                 children_list = [i.format(names) for i in v]
                 node_children.append(Node(name=k, properties=None, arguments=None, children=children_list))
-        properties = outputs[0] if outputs[0] is not None else {}
-        properties["__uuid__"] = str(self.id)
-        return Node(name=self.command.keyword(), properties=properties, arguments=outputs[1], children=node_children)
+        props = data.props if data.props is not None else {}
+        props["__eventid"] = str(self.id)
+        return Node(name=self.command.keyword(), properties=props, arguments=data.args, children=node_children)
 
     @staticmethod
     def parse(node: Node, names: NameUtil) -> "Event":
+        command = KEYWORDS[node.name]
         children = None
-        if node.children is not None:
+        if node.children is not None and command.children_names() is not None:
             children = {}
             for child in node.children:
                 children[child.name] = [Event.parse(i, names) for i in child.children]
-        command = KEYWORDS[node.name]
-        id = UUID(node.properties["__uuid__"]) if "__uuid__" in node.properties else uuid.uuid4()
-        args = command.parse(node.properties, node.arguments, names)
+        if node.properties is not None:
+            id = UUID(node.properties["__eventid"]) if "__eventid" in node.properties else uuid.uuid4()
+        else:
+            id = uuid.uuid4()
+        args = command.parse(NodeData(node.properties, node.arguments, node.children), names)
         return Event(id=id, command=command, args=args, children=children)
 
 

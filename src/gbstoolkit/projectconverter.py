@@ -1,9 +1,9 @@
 import json
 import os
-import platform
-import re
+
 
 from dsl.project import Project
+from dsl.util import sanitize_name
 
 
 def make_actor_ref(project_file: str):
@@ -40,16 +40,7 @@ def make_actor_ref(project_file: str):
         print("Found " + str(count_actors) + " actors in " + str(count_scenes) + " scenes!")
 
 
-def sanitize_name(name: str, context: str) -> str:
-    illegal_filenames = ["CON", "PRN", "AUX", "CLOCK$", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6",
-                         "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
-                         "LPT9"]
-    ret = re.sub(r'[/\\*:?\";|,\[\]&<>=]', '-', name)
-    if platform.system() == "Windows" and ret in illegal_filenames:
-        print("WARNING! " + context + " name '" + ret + "' is reserved on Windows. Renaming!")
-        print("For more information, see this video: https://youtu.be/bC6tngl0PTI")
-        ret += "-"
-    return ret
+
 
 
 if __name__ == "__main__":
