@@ -64,7 +64,7 @@ class Actor(Serializable):
             name=obj["name"] if "name" in obj else "",
             sprite_sheet_id=UUID(obj["spriteSheetId"]),
             sprite_type=SpriteType.deserialize(obj["spriteType"]),
-            frame=obj["frame"],
+            frame=obj["frame"] if "frame" in obj else 0,
             x=obj["x"],
             y=obj["y"],
             movement_type=AutoMovementType.deserialize(obj["movementType"])

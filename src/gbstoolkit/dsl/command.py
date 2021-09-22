@@ -1,5 +1,5 @@
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 from uuid import UUID
 
 from kdl import Node
@@ -7,11 +7,18 @@ from kdl import Node
 from .datatypes import ActorID, UnionArgument
 from .enums import Direction, MoveType
 from .marshalling import JsonSafe, serialize
-from .util import NameUtil, NodeData
+from .util import NameUtil, NodeData, camel_caseify
 
 COMMAND_TYPES: Dict[str, "Command"] = {}  # Fills in automatically by subclassing Command! woooo
 
 KEYWORDS: Dict[str, "Command"] = {}
+
+
+# TODO: Better way to handle this in the future for compound data types! Type inference based on name?
+def emergency_flatten(obj: JsonSafe) -> Union[int, float, str]:
+    if type(obj) == int or type(obj) == float or type(obj) == str:
+        return obj
+    return str(obj)
 
 
 # Should only ever autoregister Command instances, so if not then we've got a looot more problems on our hands
@@ -60,6 +67,35 @@ class Command(ABC, metaclass=AutoRegister):
     @abstractmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         return NotImplemented
+
+
+class Fallback(Command):
+    def __init__(self, name: str):
+        self.fallback_name = name
+        self.fallback_keyword = camel_caseify(name)
+
+    @staticmethod
+    def name() -> str:
+        return ""
+
+    @staticmethod
+    def keyword() -> str:
+        return ""
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(
+            {k: emergency_flatten(v) for k, v in args.items()} if args is not None else None,
+            None
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {k: v for k, v in data.props}
 
 
 class ActorCollisionsDisableCommand(Command):
@@ -240,6 +276,8 @@ class ActorMoveRelativeCommand(Command):
 
     @staticmethod
     def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        if "verticalFirst" in args:
+            args["moveType"] = "vertical" if args["verticalFirst"] else "horizontal"
         return NodeData(
             {"type": serialize(args["moveType"]), "collisions": args["useCollisions"]},
             [names.actor_for_id(args["actorId"]), args["x"], args["y"]]
@@ -579,7 +617,7 @@ class TextDialogueCommand(Command):
     @staticmethod
     def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
         text = args["text"]
-        node_args = [names.sprite_for_id(args["avatarId"])] if "avatarId" in args else []
+        node_args = [names.sprite_for_id(args["avatarId"])] if "avatarId" in args and args["avatarId"] != "" else []
         if type(text) == str:
             children = None
             node_args.append(text)

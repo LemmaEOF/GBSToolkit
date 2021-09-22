@@ -35,22 +35,6 @@ class ActorID(Serializable):
 
 
 @dataclass
-class NamedKey(Serializable):
-    id: str  # I'd love this to be a number but thanks to custom event var names it can't be weirdly
-    name: str
-
-    def serialize(self) -> JsonSafe:
-        return {"id": self.id, "name": self.name}
-
-    @staticmethod
-    def deserialize(obj: Dict[str, JsonSafe]) -> "NamedKey":
-        return NamedKey(
-            id=obj["id"],
-            name=obj["name"]
-        )
-
-
-@dataclass
 class OwnedProperty(Serializable):
     actor: ActorID
     property: ActorProperty
@@ -80,7 +64,6 @@ class OwnedProperty(Serializable):
 T = TypeVar("T", int, Serializable)
 
 
-# TODO: This is pretty much just kinda expensive type checking and conversion, simplify?
 @dataclass
 class UnionArgument(Serializable, Generic[T]):
     type: str
@@ -98,7 +81,7 @@ class UnionArgument(Serializable, Generic[T]):
         if type == "property":  # "84a068f6-ccd4-4b63-a78f-d4787ed25d87:direction"
             value = OwnedProperty.deserialize(obj["value"])
         elif type == "variable":  # "$5$"
-            value = str(obj["value"])  # TODO: deserialization context for defined variables? JSON doesn't care
+            value = str(obj["value"])
         elif type == "direction":  # "up", "down", "left", or "right"
             value = Direction.deserialize(obj["value"])
         elif type == "number":  # raw number
