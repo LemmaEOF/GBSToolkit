@@ -2,9 +2,12 @@ from dataclasses import dataclass
 from typing import Dict, List
 from uuid import UUID
 
+from kdl import Node
+
 from .enums import Direction
 from .marshalling import JsonSafe, serialize, Serializable
 from .palette import PaletteID
+from .util import NameUtil, map_nodes, prop_node
 
 
 @dataclass
@@ -75,4 +78,61 @@ class Settings(Serializable):
             custom_colors_black=obj["customColorsBlack"],
             start_direction=Direction.deserialize(obj["startDirection"]),
             player_sprite_sheet_id=UUID(obj["playerSpriteSheetId"])
+        )
+
+    def format(self, names: NameUtil) -> Node:
+        children = [
+            prop_node("startScene", names.scene_for_id(str(self.start_scene_id))),
+            prop_node("startX", self.start_x),
+            prop_node("startY", self.start_y),
+            prop_node("startDirection", self.start_direction.serialize()),
+            prop_node("playerSpriteSheet", names.sprite_for_id(str(self.player_sprite_sheet_id))),
+            prop_node("showCollisions", self.show_collisions),
+            prop_node("showConnections", self.show_connections),
+            prop_node("worldScrollX", self.world_scroll_x),
+            prop_node("worldScrollY", self.world_scroll_y),
+            prop_node("zoom", self.zoom),
+            prop_node("customColorsEnabled", self.custom_colors_enabled),
+            Node("defaultBackgroundPalettes", None, None, [
+                prop_node(
+                    "palette" + str(self.default_background_palette_ids.index(i)),
+                    names.palette_for_id(str(i))
+                ) for i in self.default_background_palette_ids
+            ]),
+            prop_node("defaultSpritePalette", names.palette_for_id(str(self.default_sprite_palette_id))),
+            prop_node("defaultUIPalette", names.palette_for_id(str(self.default_ui_palette_id))),
+            Node("customColors", None, None, [
+                prop_node("white", self.custom_colors_white),
+                prop_node("light", self.custom_colors_light),
+                prop_node("dark", self.custom_colors_dark),
+                prop_node("black", self.custom_colors_black)
+            ])
+        ]
+        return Node("settings", None, None, children)
+
+    @staticmethod
+    def parse(settings: List[Node], names: NameUtil) -> "Settings":
+        contents = map_nodes(settings)
+        custom_colors = contents["customColors"]
+        return Settings(
+            start_scene_id=UUID(names.id_for_scene(contents["startScene"])),
+            start_x=contents["startX"],
+            start_y=contents["startY"],
+            start_direction=Direction.deserialize(contents["startDirection"]),
+            player_sprite_sheet_id=UUID(names.id_for_sprite(contents["playerSpriteSheet"])),
+            show_collisions=contents["showCollisions"],
+            show_connections=contents["showConnections"],
+            world_scroll_x=contents["worldScrollX"],
+            world_scroll_y=contents["worldScrollY"],
+            zoom=contents["zoom"],
+            custom_colors_enabled=contents["customColorsEnabled"],
+            default_background_palette_ids=[
+                names.id_for_palette(i) for i in contents["defaultBackgroundPalettes"].values()  # TODO: safe sorting
+            ],
+            default_sprite_palette_id=names.id_for_palette(contents["defaultSpritePalette"]),
+            default_ui_palette_id=names.id_for_palette(contents["defaultUIPalette"]),
+            custom_colors_white=custom_colors["white"],
+            custom_colors_light=custom_colors["light"],
+            custom_colors_dark=custom_colors["dark"],
+            custom_colors_black=custom_colors["black"]
         )

@@ -118,13 +118,18 @@ def prop_node(name: str, value: Any) -> Node:
 
 
 def map_nodes(doc: Union[Document, List[Node]]) -> Dict[str, JsonSafe]:
-    return {i.name: i.arguments[0] if len(i.arguments) > 0 else map_nodes(i.children) for i in doc}
+    return {i.name: i.arguments[0] if i.arguments is not None and len(i.arguments) > 0 else map_nodes(i.children)
+            for i in doc
+            if (i.arguments is not None and len(i.arguments) > 0) or (i.children is not None and len(i.children) > 0)}
 
 
-def camel_caseify(name: str) -> str:
+def command_to_keyword(name: str) -> str:
     parts = name.split('_')
-    return parts[1].lower() + "".join([i.title() for i in parts[2:]])
+    if len(parts) > 2:
+        return parts[1].lower() + "".join([i.title() for i in parts[2:]])
+    else:
+        return parts[1].lower()
 
 
-def upper_snake_caseify(name: str) -> str:
-    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).upper()
+def keyword_to_command(name: str) -> str:
+    return "EVENT_" + re.sub(r'(?<!^)(?=[A-Z])', '_', name).upper()

@@ -1,8 +1,10 @@
+import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
+import uuid
 from uuid import UUID
 
-from kdl import Document, Node
+from kdl import Document, Node, parse
 
 from .actor import Actor
 from .enums import SceneType
@@ -10,7 +12,7 @@ from .event import Event
 from .marshalling import JsonSafe, serialize, Serializable
 from .palette import Palette, PaletteID
 from .trigger import Trigger
-from .util import NameUtil, prop_node, sanitize_name
+from .util import NameUtil, map_nodes, prop_node, sanitize_name
 
 
 class SceneNameUtil(NameUtil):
@@ -128,7 +130,7 @@ class Scene(Serializable):
             "id": serialize(self.id),
             "name": self.name,
             "type": serialize(self.type),
-            "backgroundId": self.background_id,
+            "backgroundId": serialize(self.background_id),
             "paletteIds": self.palette_ids,
             "x": self.x,
             "y": self.y,
@@ -222,7 +224,7 @@ class Scene(Serializable):
         collisions = Document(preserve_property_order=True)
         tile_colors = Document(preserve_property_order=True)
         hasCollisions = len(self.collisions) > 0
-        hasPalettes = len(self.tile_colors) > 0
+        hasTileColors = len(self.tile_colors) > 0
         for y in range(self.height):
             for x in range(self.width):
                 index = (self.width * y) + x
@@ -245,13 +247,13 @@ class Scene(Serializable):
                             collisions.append(Node("right", None, [x, y], None))
                     if collision & 0x10 > 0:
                         collisions.append(Node("ladder", None, [x, y], None))
-                if hasPalettes:
+                if hasTileColors:
                     color = self.tile_colors[index]
                     if color > 0:
                         tile_colors.append(Node("palette" + str(color), None, [x, y], None))
         if len(collisions) > 0:
             docs["collisions"] = collisions
-        if hasPalettes and len(tile_colors) > 0:
+        if len(tile_colors) > 0:
             docs["tile-colors"] = tile_colors
         if len(self.script) > 0:
             script = Document(preserve_property_order=True)
@@ -270,3 +272,123 @@ class Scene(Serializable):
             script.extend([Event.format(i, scene_names) for i in self.player_hit3_script])
             docs["player-hit-3"] = script
         return docs, scene_names
+
+    @staticmethod
+    def parse(docs: Dict[str, Document], names: NameUtil, scene_dir: str) -> "Scene":
+        scene_names = SceneNameUtil(names)
+        # Even more chicken-egg NameUtil hell! Aaaaaaaaaaaaaaaaaaaaa
+        if os.path.exists(scene_dir + "/actors"):
+            actor_dirs = [i.name for i in os.scandir(scene_dir + "/actors") if i.is_dir()]
+            for i in actor_dirs:
+                with open(scene_dir + "/actors/" + i + "/meta.kdl") as meta:
+                    contents = map_nodes(parse(meta))
+                    scene_names.add_actor(contents["id"], i)
+        else:
+            actor_dirs = []
+        if os.path.exists(scene_dir + "/trigges"):
+            trigger_dirs = [i.name for i in os.scandir(scene_dir + "/triggers") if i.is_dir()]
+            for i in trigger_dirs:
+                with open(scene_dir + "/triggers/" + i + "/meta.kdl") as meta:
+                    contents = map_nodes(parse(meta))
+                    scene_names.add_trigger(contents["id"], i)
+        else:
+            trigger_dirs = []
+        contents = map_nodes(docs["meta"])
+        id = UUID(contents["id"]) if "id" in contents else uuid.uuid4()
+        name = contents["name"]
+        type = SceneType.deserialize(contents["type"])
+        background_id = UUID(scene_names.id_for_background(contents["background"]))
+        x = contents["x"]
+        y = contents["y"]
+        width = contents["width"]
+        height = contents["height"]
+        if "palettes" in contents:
+            palettes = contents["palettes"]
+            palette_ids: List[Optional[str]] = [None for _ in range(6)]
+            for k, v in palettes.items():
+                palette_ids[int(k[-1])] = names.id_for_palette(v)
+        else:
+            palette_ids = []
+        notes = contents["notes"] if "notes" in contents else None
+        label_color = contents["labelColor"] if "labelColor" in contents else None
+        if "collisions" in docs:
+            collisions = [0 for _ in range(width * height)]
+            doc = docs["collisions"]
+            for node in doc:
+                node_x = node.arguments[0]
+                node_y = node.arguments[1]
+                index = (width * node_y) + node_x
+                if node.name == "all":
+                    collisions[index] |= 0xF
+                elif node.name == "up":
+                    collisions[index] |= 0x1
+                elif node.name == "down":
+                    collisions[index] |= 0x2
+                elif node.name == "left":
+                    collisions[index] |= 0x4
+                elif node.name == "right":
+                    collisions[index] |= 0x8
+                elif node.name == "ladder":
+                    collisions[index] |= 10
+        else:
+            collisions = []
+        if "tile-colors" in docs:
+            tile_colors = [0 for _ in range(width * height)]
+            doc = docs["tile-colors"]
+            for node in doc:
+                node_x = node.arguments[0]
+                node_y = node.arguments[1]
+                index = (width * node_y) + node_x
+                tile_colors[index] = int(node.name[-1])
+        else:
+            tile_colors = []
+        if "init" in docs:
+            script = [Event.parse(i, scene_names) for i in docs["init"]]
+        else:
+            script = []
+        if "player-hit-1" in docs:
+            player_hit1_script = [Event.parse(i, scene_names) for i in docs["player-hit-1"]]
+        else:
+            player_hit1_script = []
+        if "player-hit-2" in docs:
+            player_hit2_script = [Event.parse(i, scene_names) for i in docs["player-hit-2"]]
+        else:
+            player_hit2_script = []
+        if "player-hit-3" in docs:
+            player_hit3_script = [Event.parse(i, scene_names) for i in docs["player-hit-3"]]
+        else:
+            player_hit3_script = []
+        # Finally time for the actors and triggers!
+        actors = []
+        for dir in actor_dirs:
+            actor_dir = scene_dir + "/actors/" + dir
+            docs = {i.name[:-4]: parse(open(actor_dir + "/" + i.name)) for i in os.scandir(actor_dir)
+                    if i.is_file() and i.name.endswith(".kdl")}
+            actors.append(Actor.parse(docs, scene_names))
+        triggers = []
+        for dir in trigger_dirs:
+            trigger_dir = scene_dir + "/triggers/" + dir
+            docs = {i.name[:-4]: parse(open(trigger_dir + "/" + i.name)) for i in os.scandir(trigger_dir)
+                    if i.is_file() and i.name.endswith(".kdl")}
+            triggers.append(Trigger.parse(docs, scene_names))
+        return Scene(
+            id=id,
+            name=name,
+            type=type,
+            background_id=background_id,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            notes=notes,
+            label_color=label_color,
+            palette_ids=palette_ids,
+            actors=actors,
+            triggers=triggers,
+            collisions=collisions,
+            tile_colors=tile_colors,
+            script=script,
+            player_hit1_script=player_hit1_script,
+            player_hit2_script=player_hit2_script,
+            player_hit3_script=player_hit3_script
+        )

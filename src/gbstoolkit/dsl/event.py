@@ -5,9 +5,9 @@ import uuid
 
 from kdl import Node, Document
 
-from .command import Command, Fallback, COMMAND_TYPES, KEYWORDS
+from .command import Command, Fallback, COMMANDS, KEYWORDS
 from .marshalling import JsonSafe, serialize, Serializable
-from .util import NameUtil, NodeData, ParseError, FormatError, prop_node, upper_snake_caseify
+from .util import NameUtil, NodeData, ParseError, FormatError, map_nodes, prop_node, keyword_to_command
 
 
 # TODO: HOW THE HELL DO I COPE WITH THE NIGHTMARE THAT IS CUSTOM EVENTS AAAAAAAAAAAAAA
@@ -23,7 +23,7 @@ class Event(Serializable):
             name = self.command.fallback_name
         else:
             name = self.command.name()
-        ret = {"id": str(self.id), "command": name}
+        ret = {"id": serialize(self.id), "command": name}
         if self.args is not None:
             ret["args"] = serialize(self.args)
         if self.children is not None:
@@ -34,7 +34,7 @@ class Event(Serializable):
     def deserialize(evt: Dict[str, JsonSafe]) -> "Event":
         return Event(
             id=UUID(evt["id"]),
-            command=COMMAND_TYPES[evt["command"]] if evt["command"] in COMMAND_TYPES else Fallback(evt["command"]),
+            command=COMMANDS[evt["command"]] if evt["command"] in COMMANDS else Fallback(evt["command"]),
             args=evt["args"] if "args" in evt else None,
             children={k: [Event.deserialize(i) for i in v] for k, v in evt["children"].items()} if "children" in evt
             else None
@@ -60,9 +60,9 @@ class Event(Serializable):
 
     @staticmethod
     def parse(node: Node, names: NameUtil) -> "Event":
-        command = KEYWORDS[node.name] if node.name in KEYWORDS else Fallback(upper_snake_caseify(node.name))
+        command = KEYWORDS[node.name] if node.name in KEYWORDS else Fallback(keyword_to_command(node.name))
         children = None
-        if node.children is not None and command.children_names() is not None:
+        if node.children is not None and (command.children_names() is not None or isinstance(command, Fallback)):
             children = {}
             for child in node.children:
                 children[child.name] = [Event.parse(i, names) for i in child.children]
@@ -115,17 +115,31 @@ class CustomEvent(Serializable):
             prop_node("name", self.name),
             prop_node("description", self.description)
         ])
-        doc.append(Node(
-            "variables",
-            None,
-            None,
-            [Node("$" + str(k) + "$", None, [v], None) for k, v in self.variables.items()]
-        ))
-        doc.append(Node(
-            "actors",
-            None,
-            None,
-            [Node("$" + str(k) + "$", None, [v], None) for k, v in self.variables.items()]
-        ))
+        if len(self.variables) > 0:
+            doc.append(Node(
+                "variables",
+                None,
+                None,
+                [Node("$" + str(k) + "$", None, [v], None) for k, v in self.variables.items()]
+            ))
+        if len(self.actors) > 0:
+            doc.append(Node(
+                "actors",
+                None,
+                None,
+                [Node("$" + str(k) + "$", None, [v], None) for k, v in self.variables.items()]
+            ))
         doc.append(Node("script", None, None, [i.format(names) for i in self.script]))
         return doc
+
+    @staticmethod
+    def parse(doc: Document, names: NameUtil) -> "CustomEvent":
+        contents = map_nodes(doc)
+        id = UUID(contents["id"]) if "id" in contents else uuid.uuid4()
+        name = contents["name"]
+        description = contents["description"]
+        variables = {int(k[1:-1]): v for k, v in contents["variables"].items()} if "variables" in contents else {}
+        actors = {int(k[1:-1]): v for k, v in contents["actors"].items()} if "actors" in contents else {}
+        script_node = [i for i in doc if i.name == "script"][0]
+        script = [Event.parse(i, names) for i in script_node]
+        return CustomEvent(id, name, description, variables, actors, script)

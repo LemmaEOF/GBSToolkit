@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional
+import uuid
 from uuid import UUID
 
 from kdl import Document
@@ -71,12 +72,12 @@ class Trigger(Serializable):
         return docs
 
     @staticmethod
-    def parse(docs: Dict[str, Document], names: NameUtil):
+    def parse(docs: Dict[str, Document], names: NameUtil) -> "Trigger":
         meta = docs["meta"]
         contents = map_nodes(meta)
         script = [Event.parse(i, names) for i in docs["interact"]] if "interact" in docs else []
         return Trigger(
-            id=UUID(contents["id"]),
+            id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=contents["name"] if "name" in contents else "",
             x=contents["x"],
             y=contents["y"],

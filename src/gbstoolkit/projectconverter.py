@@ -1,33 +1,34 @@
 import json
 import os
 
+from kdl import parse
 
 from dsl.project import Project
 
 
-def format_project(project_file: str):
-    if not os.path.exists("out"):
-        os.mkdir("out")
+def format_project(project_file: str, project_root: str):
+    if not os.path.exists(project_root):
+        os.mkdir(project_root)
     with open(project_file) as file:
         contents = json.load(file)
         project = Project.deserialize(contents)
         proj_docs, names = project.format()
         for name, doc in proj_docs.items():
-            path = "out/" + name + ".kdl"
+            path = project_root + "/" + name + ".kdl"
             with open(path, mode="w") as out:
                 out.write(str(doc))
                 # print("Exported " + path + "!")
-        if len(project.custom_events) > 0 and not os.path.exists("out/custom-events"):
-            os.mkdir("out/custom-events")
+        if len(project.custom_events) > 0 and not os.path.exists(project_root + "/custom-events"):
+            os.mkdir(project_root + "/custom-events")
         for event in project.custom_events:
-            path = "out/custom-events/" + names.custom_event_for_id(str(event.id)) + ".kdl"
+            path = project_root + "/custom-events/" + names.custom_event_for_id(str(event.id)) + ".kdl"
             with open(path, mode="w") as out:
                 out.write(str(event.format(names)))
                 # print("Exported " + path + "!")
-        if len(project.scenes) > 0 and not os.path.exists("out/scenes"):
-            os.mkdir("out/scenes")
+        if len(project.scenes) > 0 and not os.path.exists(project_root + "/scenes"):
+            os.mkdir(project_root + "/scenes")
         for scene in project.scenes:
-            scene_path = "out/scenes/" + names.scene_for_id(str(scene.id)) + "/"
+            scene_path = project_root + "/scenes/" + names.scene_for_id(str(scene.id)) + "/"
             if not os.path.exists(scene_path):
                 os.mkdir(scene_path)
             scene_docs, scene_names = scene.format(names)
@@ -59,5 +60,15 @@ def format_project(project_file: str):
                         # print("Exported " + trigger_path + name + ".kdl!")
 
 
+def parse_project(project_file: str, project_root: str):
+    docs = {i.name[:-4]: parse(open(project_root + "/" + i.name)) for i in os.scandir(project_root)
+            if i.is_file() and i.name.endswith(".kdl")}
+    project = Project.parse(docs, project_root)
+    contents = project.serialize()
+    with open(project_file, "w") as out:
+        json.dump(contents, out, indent=4)
+
+
 if __name__ == "__main__":
-    format_project("GBS Sample Project.gbsproj")
+    # format_project("GBS Sample Project.gbsproj", "out")
+    parse_project("GBS Sample Project Reparsed.gbsproj", "out")

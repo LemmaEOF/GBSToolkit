@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional
+import uuid
 from uuid import UUID
 
 from kdl import Document
@@ -138,11 +139,11 @@ class Actor(Serializable):
         hit_2 = [Event.parse(i, names) for i in docs["hit-2"]] if "hit-2" in docs else []
         hit_3 = [Event.parse(i, names) for i in docs["hit-3"]] if "hit-3" in docs else []
         return Actor(
-            id=UUID(contents["id"]),
+            id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=contents["name"] if "name" in contents else "",
-            sprite_sheet_id=UUID(contents["spriteSheetId"]),
+            sprite_sheet_id=UUID(names.id_for_sprite(contents["spriteSheet"])),
             sprite_type=SpriteType.deserialize(contents["spriteType"]),
-            frame=contents["frame"],
+            frame=contents["startFrame"],
             x=contents["x"],
             y=contents["y"],
             movement_type=AutoMovementType.deserialize(contents["movementType"])

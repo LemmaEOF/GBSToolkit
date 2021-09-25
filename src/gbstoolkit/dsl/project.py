@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
+import os
 
-from kdl import Document, Node
+from kdl import Document, Node, parse
 
 from .assets import Background, SpriteSheet, Song
 from .event import CustomEvent
@@ -76,9 +77,13 @@ class ProjectNameUtil(NameUtil):
         self.sprite_to_id[name] = id
 
     def actor_for_id(self, id: str) -> str:
+        if id == "player" or id == "$self$" or id.isdecimal():
+            return id
         return NotImplemented
 
     def id_for_actor(self, name: str) -> str:
+        if name == "player" or name == "$self$" or name.isdecimal():
+            return name
         return NotImplemented
 
     def background_for_id(self, id: str) -> str:
@@ -97,7 +102,7 @@ class ProjectNameUtil(NameUtil):
         return self.id_to_palette[id]
 
     def id_for_palette(self, name: str) -> str:
-        return self.palette_to_id[str]
+        return self.palette_to_id[name]
 
     def scene_for_id(self, id: str) -> str:
         return self.id_to_scene[id]
@@ -209,6 +214,7 @@ class Project(Serializable):
             prop_node("version", self.version),
             prop_node("release", self.release)
         ])
+        meta.append(self.settings.format(names))
         if self.notes is not None:
             meta.append(prop_node("notes", self.notes))
         docs = {"project": meta}
@@ -229,3 +235,67 @@ class Project(Serializable):
         docs["palettes"] = palettes
         # TODO: v3 fancy sprite sheets in separate folder!
         return docs, names
+
+    @staticmethod
+    def parse(docs: Dict[str, Document], project_root: str) -> "Project":
+        meta = map_nodes(docs["project"])
+        backgrounds = [Background.parse(i) for i in docs["backgrounds"]]
+        sprite_sheets = [SpriteSheet.parse(i) for i in docs["sprite-sheets"]]
+        music = [Song.parse(i) for i in docs["music"]]
+        variables = {i.name[1:-1]: i.arguments[0] for i in docs["variables"]}
+        palettes = [Palette.parse(i) for i in docs["palettes"]]
+        names = ProjectNameUtil()
+        for background in backgrounds:
+            names.add_background(str(background.id), background.name)
+        for palette in palettes:
+            if palette.name == "":
+                names.add_palette(str(palette.id), "palette-" + str(palettes.index(palette)))
+            else:
+                names.add_palette(str(palette.id), sanitize_name(palette.name, "palette"))
+        for song in music:
+            names.add_song(str(song.id), song.name)
+        for sprite in sprite_sheets:
+            names.add_sprite(str(sprite.id), sprite.name)
+        # Chicken-egg hell: have to do a first light pass of scenes to get the IDs into NameUtil before custom events
+        scene_dirs = [i.name for i in os.scandir(project_root + "/scenes") if i.is_dir()]
+        for i in scene_dirs:
+            with open(project_root + "/scenes/" + i + "/meta.kdl") as scene_meta:
+                doc = parse(scene_meta)
+                contents = map_nodes(doc)
+                if "id" in contents:
+                    names.add_scene(contents["id"], i)
+        # More chicken-egg hell: have to do a light first pass of custom events to get the IDs into NameUtil too! aaa
+        custom_events = []
+        event_files = [i.name for i in os.scandir(project_root + "/custom-events")]
+        event_docs = []
+        for i in event_files:
+            with open(project_root + "/custom-events/" + i) as event:
+                doc = parse(event)
+                event_docs.append(doc)
+                contents = map_nodes(doc)
+                names.add_custom_event(contents["id"], sanitize_name(contents["name"], "custom event"))
+        # NameUtil should be safe! We can parse stuff using now~
+        settings = Settings.parse([i for i in docs["project"] if i.name == "settings"][0].children, names)
+        for i in event_docs:
+            custom_events.append(CustomEvent.parse(i, names))
+        scenes = []
+        for i in scene_dirs:
+            scene_dir = project_root + "/scenes/" + i
+            scene_docs = {i.name[:-4]: parse(open(scene_dir + "/" + i.name)) for i in os.scandir(scene_dir)
+                          if i.is_file() and i.name.endswith(".kdl")}
+            scenes.append(Scene.parse(scene_docs, names, scene_dir))
+        return Project(
+            name=meta["name"],
+            author=meta["author"],
+            version=meta["version"],
+            release=meta["release"],
+            notes=meta["notes"] if "notes" in meta else None,
+            scenes=scenes,
+            backgrounds=backgrounds,
+            sprite_sheets=sprite_sheets,
+            palettes=palettes,
+            custom_events=custom_events,
+            music=music,
+            variables=variables,
+            settings=settings
+        )

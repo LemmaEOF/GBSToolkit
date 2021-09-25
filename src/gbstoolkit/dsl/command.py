@@ -7,9 +7,9 @@ from kdl import Node
 from .datatypes import ActorID, UnionArgument
 from .enums import Direction, MoveType
 from .marshalling import JsonSafe, serialize
-from .util import NameUtil, NodeData, camel_caseify
+from .util import NameUtil, NodeData, command_to_keyword
 
-COMMAND_TYPES: Dict[str, "Command"] = {}  # Fills in automatically by subclassing Command! woooo
+COMMANDS: Dict[str, "Command"] = {}  # Fills in automatically by subclassing Command! woooo
 
 KEYWORDS: Dict[str, "Command"] = {}
 
@@ -25,7 +25,7 @@ def emergency_flatten(obj: JsonSafe) -> Union[int, float, str]:
 class AutoRegister(ABCMeta):
     def __init__(cls, name, bases, clsdict):
         if len(cls.mro()) == 4 and "name" in clsdict and "keyword" in clsdict:
-            COMMAND_TYPES[cls.name()] = cls
+            COMMANDS[cls.name()] = cls
             KEYWORDS[cls.keyword()] = cls
         super(AutoRegister, cls).__init__(name, bases, clsdict)
 
@@ -72,7 +72,7 @@ class Command(ABC, metaclass=AutoRegister):
 class Fallback(Command):
     def __init__(self, name: str):
         self.fallback_name = name
-        self.fallback_keyword = camel_caseify(name)
+        self.fallback_keyword = command_to_keyword(name)
 
     @staticmethod
     def name() -> str:
@@ -95,7 +95,7 @@ class Fallback(Command):
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return {k: v for k, v in data.props}
+        return {k: v for k, v in data.props.items() if k != "__eventid"}
 
 
 class ActorCollisionsDisableCommand(Command):

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Any
+import uuid
 from uuid import UUID
 
 from kdl import Node
@@ -62,7 +63,7 @@ class Background(Serializable):
     def parse(node: Node) -> "Background":
         contents = map_nodes(node.children)
         return Background(
-            id=UUID(contents["id"]),
+            id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=node.name,
             width=contents["width"],
             height=contents["height"],
@@ -118,7 +119,7 @@ class SpriteSheet(Serializable):  # TODO: gonna break entirely in v3! be ready!
     def parse(node: Node) -> "SpriteSheet":
         contents = map_nodes(node.children)
         return SpriteSheet(
-            id=UUID(contents["id"]),
+            id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=node.name,
             num_frames=contents["numFrames"],
             type=SpriteSheetType.deserialize(contents["type"]),
@@ -168,7 +169,7 @@ class Song(Serializable):
     def parse(node: Node) -> "Song":
         contents = map_nodes(node.children)
         return Song(
-            id=UUID(contents["id"]),
+            id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=node.name,
             filename=contents["filename"],
             settings={},  # TODO: can't do this bc I don't know what settings is
