@@ -88,11 +88,11 @@ class Settings(Serializable):
             prop_node("startY", self.start_y),
             prop_node("startDirection", self.start_direction.serialize()),
             prop_node("playerSpriteSheet", names.sprite_for_id(str(self.player_sprite_sheet_id))),
-            prop_node("showCollisions", self.show_collisions),
-            prop_node("showConnections", self.show_connections),
-            prop_node("worldScrollX", self.world_scroll_x),
-            prop_node("worldScrollY", self.world_scroll_y),
-            prop_node("zoom", self.zoom),
+            prop_node("__showCollisions", self.show_collisions),
+            prop_node("__showConnections", self.show_connections),
+            prop_node("__worldScrollX", self.world_scroll_x),
+            prop_node("__worldScrollY", self.world_scroll_y),
+            prop_node("__zoom", self.zoom),
             prop_node("customColorsEnabled", self.custom_colors_enabled),
             Node("defaultBackgroundPalettes", None, None, [
                 prop_node(
@@ -121,11 +121,11 @@ class Settings(Serializable):
             start_y=contents["startY"],
             start_direction=Direction.deserialize(contents["startDirection"]),
             player_sprite_sheet_id=UUID(names.id_for_sprite(contents["playerSpriteSheet"])),
-            show_collisions=contents["showCollisions"],
-            show_connections=contents["showConnections"],
-            world_scroll_x=contents["worldScrollX"],
-            world_scroll_y=contents["worldScrollY"],
-            zoom=contents["zoom"],
+            show_collisions=contents["__showCollisions"],
+            show_connections=contents["__showConnections"],
+            world_scroll_x=contents["__worldScrollX"],
+            world_scroll_y=contents["__worldScrollY"],
+            zoom=contents["__zoom"],
             custom_colors_enabled=contents["customColorsEnabled"],
             default_background_palette_ids=[
                 names.id_for_palette(i) for i in contents["defaultBackgroundPalettes"].values()  # TODO: safe sorting
