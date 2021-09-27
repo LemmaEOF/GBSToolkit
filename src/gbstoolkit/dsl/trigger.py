@@ -21,6 +21,7 @@ class Trigger(Serializable):
     # trigger: str   TODO: implement once it's actually a thing because oh lord I want it to be
     notes: Optional[str]
     script: List[Event]
+    scene_index: int
 
     def serialize(self) -> JsonSafe:
         ret = {
@@ -38,7 +39,7 @@ class Trigger(Serializable):
         return ret
 
     @staticmethod
-    def deserialize(obj: Dict[str, JsonSafe]) -> "Trigger":
+    def deserialize(obj: Dict[str, JsonSafe], scene_index: int) -> "Trigger":
         return Trigger(
             id=UUID(obj["id"]),
             name=obj["name"] if "name" in obj else "",
@@ -48,7 +49,8 @@ class Trigger(Serializable):
             height=obj["height"],
             # trigger = obj["trigger"],
             notes=obj["notes"] if "notes" in obj else None,
-            script=[Event.deserialize(i) for i in obj["script"]]
+            script=[Event.deserialize(i) for i in obj["script"]],
+            scene_index=scene_index
         )
 
     def format(self, names: NameUtil) -> Dict[str, Document]:
@@ -61,6 +63,7 @@ class Trigger(Serializable):
             prop_node("width", self.width),
             prop_node("height", self.height),
             # prop_node("trigger", self.trigger),
+            prop_node("__index", self.scene_index)
         ])
         if self.notes is not None:
             meta.append(self.notes)
@@ -85,5 +88,6 @@ class Trigger(Serializable):
             height=contents["height"],
             # trigger=contents["trigger"],
             notes=contents["notes"] if "notes" in contents else None,
-            script=script
+            script=script,
+            scene_index=contents["__index"]
         )

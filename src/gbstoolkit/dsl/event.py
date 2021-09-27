@@ -7,10 +7,9 @@ from kdl import Node, Document
 
 from .command import Command, Fallback, COMMANDS, KEYWORDS
 from .marshalling import JsonSafe, serialize, Serializable
-from .util import NameUtil, NodeData, ParseError, FormatError, map_nodes, prop_node, keyword_to_command
+from .util import NameUtil, NodeData, ProtoEvent, ParseError, FormatError, map_nodes, prop_node, keyword_to_command
 
 
-# TODO: HOW THE HELL DO I COPE WITH THE NIGHTMARE THAT IS CUSTOM EVENTS AAAAAAAAAAAAAA
 @dataclass
 class Event(Serializable):
     id: UUID
@@ -43,7 +42,7 @@ class Event(Serializable):
     def format(self, names: NameUtil) -> Node:
         data = self.command.format(self.args, names)
         node_children = data.children
-        if self.children is not None:
+        if self.children is not None and self.command.name != "EVENT_CALL_CUSTOM_EVENT":
             if data.children is not None:
                 raise FormatError("event", self, "")
             node_children = []
@@ -75,7 +74,21 @@ class Event(Serializable):
                   + ". Arguments may be parsed incorrectly!")
             print("If you are using a plugin, please let either LemmaEOF or the plugin dev know to add compat!")
         args = command.parse(NodeData(node.properties, node.arguments, node.children), names)
+        if command.name() == "EVENT_CALL_CUSTOM_EVENT":
+            children = {"script": [Event.deprotofy(i)
+                                   for i in names.script_for_custom_event(args["customEventId"])]}
         return Event(id=id, command=command, args=args, children=children)
+
+    def protofy(self) -> ProtoEvent:
+        children = {k: [i.protofy() for i in v]
+                    for k, v in self.children.items()} if self.children is not None else None
+        return ProtoEvent(command=self.command.name(), args=self.args, children=children)
+
+    @staticmethod
+    def deprotofy(proto: ProtoEvent) -> "Event":
+        children = {k: [Event.deprotofy(i) for i in v]
+                    for k, v in proto.children.items()} if proto.children.items() is not None else None
+        return Event(id=uuid.uuid4(), command=COMMANDS[proto.command], args=proto.args, children=children)
 
 
 @dataclass
@@ -86,6 +99,7 @@ class CustomEvent(Serializable):
     variables: Dict[int, str]
     actors: Dict[int, str]
     script: List[Event]
+    proj_index: int
 
     def serialize(self) -> JsonSafe:
         return {
@@ -98,14 +112,15 @@ class CustomEvent(Serializable):
         }
 
     @staticmethod
-    def deserialize(obj: Dict[str, JsonSafe]) -> "CustomEvent":
+    def deserialize(obj: Dict[str, JsonSafe], proj_index: int) -> "CustomEvent":
         return CustomEvent(
             id=UUID(obj["id"]),
             name=obj["name"],
             description=obj["description"],
             variables={int(k): v["name"] for k, v in obj["variables"].items()},
             actors={int(k): v["name"] for k, v in obj["actors"].items()},
-            script=[Event.deserialize(i) for i in obj["script"]]
+            script=[Event.deserialize(i) for i in obj["script"]],
+            proj_index=proj_index
         )
 
     def format(self, names: NameUtil) -> Document:
@@ -113,7 +128,8 @@ class CustomEvent(Serializable):
         doc.extend([
             prop_node("id", str(self.id)),
             prop_node("name", self.name),
-            prop_node("description", self.description)
+            prop_node("description", self.description),
+            prop_node("__index", self.proj_index)
         ])
         if len(self.variables) > 0:
             doc.append(Node(
@@ -142,4 +158,5 @@ class CustomEvent(Serializable):
         actors = {int(k[1:-1]): v for k, v in contents["actors"].items()} if "actors" in contents else {}
         script_node = [i for i in doc if i.name == "script"][0]
         script = [Event.parse(i, names) for i in script_node]
-        return CustomEvent(id, name, description, variables, actors, script)
+        proj_index = contents["__index"]
+        return CustomEvent(id, name, description, variables, actors, script, proj_index)

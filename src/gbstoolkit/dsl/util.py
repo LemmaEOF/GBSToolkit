@@ -9,6 +9,14 @@ from kdl import Document, Node
 from .marshalling import JsonSafe, Serializable, serialize
 
 
+# Weird median class to avoid circular refs, wheeee
+@dataclass
+class ProtoEvent:
+    command: str
+    args: Optional[Dict[str, JsonSafe]]
+    children: Optional[Dict[str, List["ProtoEvent"]]]
+
+
 class NameUtil(ABC):
 
     @abstractmethod
@@ -33,6 +41,14 @@ class NameUtil(ABC):
 
     @abstractmethod
     def id_for_custom_event(self, name: str) -> str:
+        return NotImplemented
+
+    @abstractmethod
+    def script_for_custom_event(self, id: str) -> List[ProtoEvent]:
+        return NotImplemented
+
+    @abstractmethod
+    def safe_custom_event_name(self, id: str) -> str:
         return NotImplemented
 
     @abstractmethod

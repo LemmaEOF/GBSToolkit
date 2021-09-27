@@ -32,6 +32,7 @@ class Actor(Serializable):
     hit1_script: List[Event]
     hit2_script: List[Event]
     hit3_script: List[Event]
+    scene_index: int
 
     def serialize(self) -> JsonSafe:
         ret = {
@@ -59,7 +60,7 @@ class Actor(Serializable):
         return ret
 
     @staticmethod
-    def deserialize(obj: Dict[str, JsonSafe]) -> "Actor":
+    def deserialize(obj: Dict[str, JsonSafe], scene_index: int) -> "Actor":
         return Actor(
             id=UUID(obj["id"]),
             name=obj["name"] if "name" in obj else "",
@@ -80,7 +81,8 @@ class Actor(Serializable):
             update_script=[Event.deserialize(i) for i in obj["updateScript"]] if "updateScript" in obj else [],
             hit1_script=[Event.deserialize(i) for i in obj["hit1Script"]] if "hit1Script" in obj else [],
             hit2_script=[Event.deserialize(i) for i in obj["hit2Script"]] if "hit2Script" in obj else [],
-            hit3_script=[Event.deserialize(i) for i in obj["hit3Script"]] if "hit3Script" in obj else []
+            hit3_script=[Event.deserialize(i) for i in obj["hit3Script"]] if "hit3Script" in obj else [],
+            scene_index=scene_index
         )
 
     def format(self, names: NameUtil) -> Dict[str, Document]:
@@ -97,7 +99,8 @@ class Actor(Serializable):
             prop_node("direction", self.direction),
             prop_node("moveSpeed", self.move_speed),
             prop_node("animSpeed", self.anim_speed),
-            prop_node("collisionGroup", self.collision_group)
+            prop_node("collisionGroup", self.collision_group),
+            prop_node("__index", self.scene_index)
         ])
         if self.notes is not None:
             meta.append(prop_node("notes", self.notes))
@@ -158,5 +161,6 @@ class Actor(Serializable):
             update_script=update,
             hit1_script=hit_1,
             hit2_script=hit_2,
-            hit3_script=hit_3
+            hit3_script=hit_3,
+            scene_index=contents["__index"]
         )

@@ -601,6 +601,201 @@ class ActorStopUpdateScriptCommand(Command):
         return {"actorId": names.id_for_actor(data.args[0])}
 
 
+class CallCustomEventCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_CALL_CUSTOM_EVENT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "call"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"customEventId": UUID}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        if len(args) > 2:
+            props = {}
+            for k, v in args.items():
+                if "variable" in k:
+                    props["var" + k[10:-2]] = "$" + v + "$"
+                elif "actor" in k:
+                    props["actor" + k[7:-2]] = names.actor_for_id(v)
+        else:
+            props = None
+        return NodeData(props, [names.custom_event_for_id(args["customEventId"])])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {
+            "customEventId": names.id_for_custom_event(data.args[0]),
+            "__name": names.safe_custom_event_name(data.args[0])
+        }
+        if data.props is not None:
+            for k, v in data.props:
+                if k.startswith("var"):
+                    ret["$variable[" + k[3:] + "]$"] = v[1:-1]
+                elif k.startswith("actor"):
+                    ret["$actor[" + k[5:] + "]$"] = names.id_for_actor(v)
+        return ret
+
+
+class CameraLockCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_CAMERA_LOCK"
+
+    @staticmethod
+    def keyword() -> str:
+        return "lockCamera"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"speed": int}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [args["speed"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"speed": data.args[0]}
+
+
+class CameraMoveToCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_CAMERA_MOVE_TO"
+
+    @staticmethod
+    def keyword() -> str:
+        return "moveCameraTo"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"x": int, "y": int, "speed": int}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData({"speed": args["speed"]}, [args["x"], args["y"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"x": data.args[0], "y": data.args[1], "speed": data.props["speed"]}
+
+
+class CameraShakeCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_CAMERA_SHAKE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "shakeCamera"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"shakeDirection": MoveType, "time": float}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [args["shakeDirection"], args["time"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        pass
+
+
+class CommentCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_COMMENT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "note"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"text": str}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [args["text"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"text": data.args[0]}
+
+
+class DataClearCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_DATA_CLEAR"
+
+    @staticmethod
+    def keyword() -> str:
+        return "clearSave"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, None)
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+class DataLoadCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_DATA_LOAD"
+
+    @staticmethod
+    def keyword() -> str:
+        return "loadSave"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, None)
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+class DataSaveCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_DATA_SAVE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "createSave"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, None)
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
 class TextDialogueCommand(Command):
     @staticmethod
     def name() -> str:

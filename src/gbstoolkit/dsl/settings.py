@@ -10,6 +10,7 @@ from .palette import PaletteID
 from .util import NameUtil, map_nodes, prop_node
 
 
+# TODO: customHead, showNavigator, navigatorSplitSizes, cartType, playerPaletteId
 @dataclass
 class Settings(Serializable):
     start_scene_id: UUID

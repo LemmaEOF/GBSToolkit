@@ -12,7 +12,7 @@ from .event import Event
 from .marshalling import JsonSafe, serialize, Serializable
 from .palette import Palette, PaletteID
 from .trigger import Trigger
-from .util import NameUtil, map_nodes, prop_node, sanitize_name
+from .util import NameUtil, ProtoEvent, map_nodes, prop_node, sanitize_name
 
 
 class SceneNameUtil(NameUtil):
@@ -72,6 +72,12 @@ class SceneNameUtil(NameUtil):
     def id_for_custom_event(self, name: str) -> str:
         return self.parent.id_for_custom_event(name)
 
+    def script_for_custom_event(self, id: str) -> List[ProtoEvent]:
+        return self.parent.script_for_custom_event(id)
+
+    def safe_custom_event_name(self, id: str) -> str:
+        return self.parent.safe_custom_event_name(id)
+
     def palette_for_id(self, id: str) -> str:
         return self.parent.palette_for_id(id)
 
@@ -124,6 +130,7 @@ class Scene(Serializable):
     player_hit1_script: List[Event]
     player_hit2_script: List[Event]
     player_hit3_script: List[Event]
+    proj_index: int
 
     def serialize(self) -> JsonSafe:
         ret = {
@@ -152,7 +159,7 @@ class Scene(Serializable):
         return ret
 
     @staticmethod
-    def deserialize(obj: Dict[str, JsonSafe]) -> "Scene":
+    def deserialize(obj: Dict[str, JsonSafe], proj_index: int) -> "Scene":
         return Scene(
             id=UUID(obj["id"]),
             name=obj["name"],
@@ -165,14 +172,15 @@ class Scene(Serializable):
             height=obj["height"],
             notes=obj["notes"] if "notes" in obj else None,
             label_color=obj["labelColor"] if "labelColor" in obj else None,
-            actors=[Actor.deserialize(i) for i in obj["actors"]],
-            triggers=[Trigger.deserialize(i) for i in obj["triggers"]],
+            actors=[Actor.deserialize(i, obj["actors"].index(i)) for i in obj["actors"]],
+            triggers=[Trigger.deserialize(i, obj["triggers"].index(i)) for i in obj["triggers"]],
             collisions=obj["collisions"],
             tile_colors=obj["tileColors"] if "tileColors" in obj else [],
             script=[Event.deserialize(i) for i in obj["script"]],
             player_hit1_script=[Event.deserialize(i) for i in obj["playerHit1Script"]],
             player_hit2_script=[Event.deserialize(i) for i in obj["playerHit2Script"]],
-            player_hit3_script=[Event.deserialize(i) for i in obj["playerHit3Script"]]
+            player_hit3_script=[Event.deserialize(i) for i in obj["playerHit3Script"]],
+            proj_index=proj_index
         )
 
     def format(self, names: NameUtil) -> Tuple[Dict[str, Document], NameUtil]:
@@ -202,7 +210,8 @@ class Scene(Serializable):
             prop_node("x", self.x),
             prop_node("y", self.y),
             prop_node("width", self.width),
-            prop_node("height", self.height)
+            prop_node("height", self.height),
+            prop_node("__index", self.proj_index)
         ])
         if len(self.palette_ids) > 0:
             meta.append(Node(
@@ -302,6 +311,7 @@ class Scene(Serializable):
         y = contents["y"]
         width = contents["width"]
         height = contents["height"]
+        proj_index = contents["__index"]
         if "palettes" in contents:
             palettes = contents["palettes"]
             palette_ids: List[Optional[str]] = [None for _ in range(6)]
@@ -359,18 +369,20 @@ class Scene(Serializable):
         else:
             player_hit3_script = []
         # Finally time for the actors and triggers!
-        actors = []
+        actors: List[Optional[Actor]] = [None for _ in range(len(actor_dirs))]
         for dir in actor_dirs:
             actor_dir = scene_dir + "/actors/" + dir
             docs = {i.name[:-4]: parse(open(actor_dir + "/" + i.name)) for i in os.scandir(actor_dir)
                     if i.is_file() and i.name.endswith(".kdl")}
-            actors.append(Actor.parse(docs, scene_names))
-        triggers = []
+            actor = Actor.parse(docs, scene_names)
+            actors[actor.scene_index] = actor
+        triggers: List[Optional[Trigger]] = [None for _ in range(len(trigger_dirs))]
         for dir in trigger_dirs:
             trigger_dir = scene_dir + "/triggers/" + dir
             docs = {i.name[:-4]: parse(open(trigger_dir + "/" + i.name)) for i in os.scandir(trigger_dir)
                     if i.is_file() and i.name.endswith(".kdl")}
-            triggers.append(Trigger.parse(docs, scene_names))
+            trigger = Trigger.parse(docs, scene_names)
+            triggers[trigger.scene_index] = trigger
         return Scene(
             id=id,
             name=name,
@@ -390,5 +402,6 @@ class Scene(Serializable):
             script=script,
             player_hit1_script=player_hit1_script,
             player_hit2_script=player_hit2_script,
-            player_hit3_script=player_hit3_script
+            player_hit3_script=player_hit3_script,
+            proj_index=proj_index
         )

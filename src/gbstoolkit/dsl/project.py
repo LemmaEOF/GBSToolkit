@@ -10,7 +10,7 @@ from .marshalling import JsonSafe, serialize, Serializable
 from .palette import Palette
 from .scene import Scene
 from .settings import Settings
-from .util import NameUtil, prop_node, map_nodes, sanitize_name
+from .util import NameUtil, ProtoEvent, prop_node, map_nodes, sanitize_name
 
 
 class ProjectNameUtil(NameUtil):
@@ -19,6 +19,8 @@ class ProjectNameUtil(NameUtil):
         self.background_to_id = {}
         self.id_to_custom_event = {}
         self.custom_event_to_id = {}
+        self.custom_event_scripts = {}
+        self.custom_event_names = {}
         self.id_to_palette = {}
         self.palette_to_id = {}
         self.id_to_scene = {}
@@ -45,6 +47,10 @@ class ProjectNameUtil(NameUtil):
             self.custom_event_name_counts[name] = 1
         self.id_to_custom_event[id] = name
         self.custom_event_to_id[name] = id
+
+    def add_event_script(self, id: str, safe_name: str, script: List[ProtoEvent]):
+        self.custom_event_names[id] = safe_name
+        self.custom_event_scripts[id] = script
 
     def add_palette(self, id: str, name: str):
         if name in self.palette_name_counts:
@@ -98,6 +104,12 @@ class ProjectNameUtil(NameUtil):
     def id_for_custom_event(self, name: str) -> str:
         return self.custom_event_to_id[name]
 
+    def script_for_custom_event(self, id: str) -> List[ProtoEvent]:
+        return self.custom_event_scripts[id]
+
+    def safe_custom_event_name(self, id: str) -> str:
+        return self.custom_event_names[id]
+
     def palette_for_id(self, id: str) -> str:
         return self.id_to_palette[id]
 
@@ -144,6 +156,7 @@ class Project(Serializable):
     music: List[Song]
     variables: Dict[str, str]
     settings: Settings
+    # TODO: engine field values (document, define, parse
 
     def serialize(self) -> JsonSafe:
         ret = {
@@ -174,11 +187,11 @@ class Project(Serializable):
             version=obj["_version"],
             release=obj["_release"],
             notes=obj["notes"] if "notes" in obj else None,
-            scenes=[Scene.deserialize(i) for i in obj["scenes"]],
+            scenes=[Scene.deserialize(i, obj["scenes"].index(i)) for i in obj["scenes"]],
             backgrounds=[Background.deserialize(i) for i in obj["backgrounds"]],
             sprite_sheets=[SpriteSheet.deserialize(i) for i in obj["spriteSheets"]],
             palettes=[Palette.deserialize(i) for i in obj["palettes"]],
-            custom_events=[CustomEvent.deserialize(i) for i in obj["customEvents"]],
+            custom_events=[CustomEvent.deserialize(i, obj["customEvents"].index(i)) for i in obj["customEvents"]],
             music=[Song.deserialize(i) for i in obj["music"]],
             variables={i["id"]: i["name"] for i in obj["variables"]},
             settings=Settings.deserialize(obj["settings"])
@@ -265,7 +278,6 @@ class Project(Serializable):
                 if "id" in contents:
                     names.add_scene(contents["id"], i)
         # More chicken-egg hell: have to do a light first pass of custom events to get the IDs into NameUtil too! aaa
-        custom_events = []
         event_files = [i.name for i in os.scandir(project_root + "/custom-events")]
         event_docs = []
         for i in event_files:
@@ -274,16 +286,21 @@ class Project(Serializable):
                 event_docs.append(doc)
                 contents = map_nodes(doc)
                 names.add_custom_event(contents["id"], sanitize_name(contents["name"], "custom event"))
-        # NameUtil should be safe! We can parse stuff using now~
+        # NameUtil should be safe! We can parse stuff using them now~
         settings = Settings.parse([i for i in docs["project"] if i.name == "settings"][0].children, names)
+        custom_events: List[Optional[CustomEvent]] = [None for _ in range(len(event_docs))]
         for i in event_docs:
-            custom_events.append(CustomEvent.parse(i, names))
-        scenes = []
+            event = CustomEvent.parse(i, names)
+            custom_events[event.proj_index] = event
+            # theoretically no race condition worry - nested custom event calls are illegal
+            names.add_event_script(str(event.id), event.name, [i.protofy() for i in event.script])
+        scenes: List[Optional[Scene]] = [None for _ in range(len(scene_dirs))]
         for i in scene_dirs:
             scene_dir = project_root + "/scenes/" + i
             scene_docs = {i.name[:-4]: parse(open(scene_dir + "/" + i.name)) for i in os.scandir(scene_dir)
                           if i.is_file() and i.name.endswith(".kdl")}
-            scenes.append(Scene.parse(scene_docs, names, scene_dir))
+            scene = Scene.parse(scene_docs, names, scene_dir)
+            scenes[scene.proj_index] = scene
         return Project(
             name=meta["name"],
             author=meta["author"],
