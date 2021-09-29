@@ -796,6 +796,119 @@ class DataSaveCommand(Command):
         return None
 
 
+# TODO: engine field stuff
+class EngineFieldSetCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_ENGINE_FIELD_SET"
+
+    @staticmethod
+    def keyword() -> str:
+        return "setEngineField"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        pass
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        pass
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        pass
+
+
+class EngineFieldStoreCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_ENGINE_FIELD_STORE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "storeEngineField"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        pass
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        pass
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        pass
+
+
+class FadeInCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_FADE_IN"
+
+    @staticmethod
+    def keyword() -> str:
+        return "fadeIn"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"speed": int}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, [args["speed"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"speed": data.args[0]}
+
+
+class FadeOutCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_ENGINE_FAD_OUT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "fadeOut"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"speed": int}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, args["speed"])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"speed": data.args[0]}
+
+
+# TODO: single child so make it a direct child (in event.py)
+class GroupCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_GROUP"
+
+    @staticmethod
+    def keyword() -> str:
+        return "group"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        return NodeData(None, None)
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+
 class TextDialogueCommand(Command):
     @staticmethod
     def name() -> str:
