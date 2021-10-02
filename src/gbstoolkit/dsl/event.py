@@ -7,7 +7,7 @@ from kdl import Node, Document
 
 from .command import Command, Fallback, COMMANDS, KEYWORDS
 from .marshalling import JsonSafe, serialize, Serializable
-from .util import NameUtil, NodeData, ProtoEvent, ParseError, FormatError, map_nodes, prop_node, keyword_to_command
+from .util import NameUtil, NodeData, ProtoEvent, ProgressTracker, ParseError, FormatError, map_nodes, prop_node, keyword_to_command
 
 
 @dataclass
@@ -58,21 +58,19 @@ class Event(Serializable):
         return Node(name=keyword, properties=props, arguments=data.args, children=node_children)
 
     @staticmethod
-    def parse(node: Node, names: NameUtil) -> "Event":
+    def parse(node: Node, names: NameUtil, progress: ProgressTracker) -> "Event":
         command = KEYWORDS[node.name] if node.name in KEYWORDS else Fallback(keyword_to_command(node.name))
         children = None
         if node.children is not None and (command.children_names() is not None or isinstance(command, Fallback)):
             children = {}
             for child in node.children:
-                children[child.name] = [Event.parse(i, names) for i in child.children]
+                children[child.name] = [Event.parse(i, names, progress) for i in child.children]
         if node.properties is not None:
             id = UUID(node.properties["__eventid"]) if "__eventid" in node.properties else uuid.uuid4()
         else:
             id = uuid.uuid4()
         if isinstance(command, Fallback):
-            print("WARNING! Attempting to parse unknown command " + command.fallback_name
-                  + ". Arguments may be parsed incorrectly!")
-            print("If you are using a plugin, please let either LemmaEOF or the plugin dev know to add compat!")
+            progress.flag_missing_command(command.fallback_keyword)
         args = command.parse(NodeData(node.properties, node.arguments, node.children), names)
         if command.name() == "EVENT_CALL_CUSTOM_EVENT":
             children = {"script": [Event.deprotofy(i)
@@ -87,7 +85,7 @@ class Event(Serializable):
     @staticmethod
     def deprotofy(proto: ProtoEvent) -> "Event":
         children = {k: [Event.deprotofy(i) for i in v]
-                    for k, v in proto.children.items()} if proto.children.items() is not None else None
+                    for k, v in proto.children.items()} if proto.children is not None else None
         return Event(id=uuid.uuid4(), command=COMMANDS[proto.command], args=proto.args, children=children)
 
 
@@ -149,7 +147,7 @@ class CustomEvent(Serializable):
         return doc
 
     @staticmethod
-    def parse(doc: Document, names: NameUtil) -> "CustomEvent":
+    def parse(doc: Document, names: NameUtil, progress: ProgressTracker) -> "CustomEvent":
         contents = map_nodes(doc)
         id = UUID(contents["id"]) if "id" in contents else uuid.uuid4()
         name = contents["name"]
@@ -157,6 +155,6 @@ class CustomEvent(Serializable):
         variables = {int(k[1:-1]): v for k, v in contents["variables"].items()} if "variables" in contents else {}
         actors = {int(k[1:-1]): v for k, v in contents["actors"].items()} if "actors" in contents else {}
         script_node = [i for i in doc if i.name == "script"][0]
-        script = [Event.parse(i, names) for i in script_node]
+        script = [Event.parse(i, names, progress) for i in script_node]
         proj_index = contents["__index"]
         return CustomEvent(id, name, description, variables, actors, script, proj_index)

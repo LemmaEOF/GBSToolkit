@@ -8,7 +8,7 @@ from kdl import Document
 from .enums import Direction, AutoMovementType, SpriteType
 from .event import Event
 from .marshalling import JsonSafe, serialize, Serializable
-from .util import NameUtil, prop_node, map_nodes
+from .util import NameUtil, ProgressTracker, prop_node, map_nodes
 
 
 @dataclass
@@ -132,15 +132,15 @@ class Actor(Serializable):
         return docs
 
     @staticmethod
-    def parse(docs: Dict[str, Document], names: NameUtil) -> "Actor":
+    def parse(docs: Dict[str, Document], names: NameUtil, progress: ProgressTracker) -> "Actor":
         meta = docs["meta"]
         contents = map_nodes(meta)
-        interact = [Event.parse(i, names) for i in docs["interact"]] if "interact" in docs else []
-        init = [Event.parse(i, names) for i in docs["init"]] if "init" in docs else []
-        update = [Event.parse(i, names) for i in docs["update"]] if "update" in docs else []
-        hit_1 = [Event.parse(i, names) for i in docs["hit-1"]] if "hit-1" in docs else []
-        hit_2 = [Event.parse(i, names) for i in docs["hit-2"]] if "hit-2" in docs else []
-        hit_3 = [Event.parse(i, names) for i in docs["hit-3"]] if "hit-3" in docs else []
+        interact = [Event.parse(i, names, progress) for i in docs["interact"]] if "interact" in docs else []
+        init = [Event.parse(i, names, progress) for i in docs["init"]] if "init" in docs else []
+        update = [Event.parse(i, names, progress) for i in docs["update"]] if "update" in docs else []
+        hit_1 = [Event.parse(i, names, progress) for i in docs["hit-1"]] if "hit-1" in docs else []
+        hit_2 = [Event.parse(i, names, progress) for i in docs["hit-2"]] if "hit-2" in docs else []
+        hit_3 = [Event.parse(i, names, progress) for i in docs["hit-3"]] if "hit-3" in docs else []
         return Actor(
             id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=contents["name"] if "name" in contents else "",

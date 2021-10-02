@@ -12,7 +12,7 @@ from .event import Event
 from .marshalling import JsonSafe, serialize, Serializable
 from .palette import Palette, PaletteID
 from .trigger import Trigger
-from .util import NameUtil, ProtoEvent, map_nodes, prop_node, sanitize_name
+from .util import NameUtil, ProgressTracker, ProtoEvent, map_nodes, prop_node, sanitize_name
 
 
 class SceneNameUtil(NameUtil):
@@ -25,13 +25,15 @@ class SceneNameUtil(NameUtil):
         self.actor_name_counts = {}
         self.trigger_name_counts = {}
 
-    def add_actor(self, id: str, name: str):
+    def add_actor(self, id: str, name: str, progress: ProgressTracker):
         if name == "player" or name == "$self$" or name.isdecimal():
-            print("Actor name '" + name + "' may overlap with built-in names! Renaming to '" + name + "-'!")
+            progress.log_error("Actor name '" + name + "' in scene '" + progress.current_scene
+                               + "' may overlap with built-in names! Renaming to '" + name + "-'!")
             name += "-"
         if name in self.actor_name_counts:
-            print("Actor name '" + name + "' Already exists in this scene! Renaming to '" + name + "-"
-                  + str(self.actor_name_counts[name] + 1) + "'!")
+            progress.log_error("Actor name '" + name + "' Already exists in scene '"
+                               + progress.current_scene + "'! Renaming to '" + name + "-"
+                               + str(self.actor_name_counts[name] + 1) + "'!")
             self.actor_name_counts[name] += 1
             name += "-" + str(self.actor_name_counts[name])
         else:
@@ -39,10 +41,10 @@ class SceneNameUtil(NameUtil):
         self.id_to_actor[id] = name
         self.actor_to_id[name] = id
 
-    def add_trigger(self, id: str, name: str):
+    def add_trigger(self, id: str, name: str, progress: ProgressTracker):
         if name in self.trigger_name_counts:
-            print("Trigger name '" + name + "' Already exists in this scene! Renaming to '" + name + "-'!"
-                  + str(self.trigger_name_counts[name] + 1))
+            progress.log_error("Trigger name '" + name + "' Already exists in scene '" + progress.current_scene
+                               + "! Renaming to '" + name + "-'!" + str(self.trigger_name_counts[name] + 1))
             self.trigger_name_counts[name] += 1
             name += "-" + str(self.trigger_name_counts[name])
         else:
@@ -75,8 +77,8 @@ class SceneNameUtil(NameUtil):
     def script_for_custom_event(self, id: str) -> List[ProtoEvent]:
         return self.parent.script_for_custom_event(id)
 
-    def safe_custom_event_name(self, id: str) -> str:
-        return self.parent.safe_custom_event_name(id)
+    def raw_custom_event_name(self, name: str) -> str:
+        return self.parent.raw_custom_event_name(name)
 
     def palette_for_id(self, id: str) -> str:
         return self.parent.palette_for_id(id)
@@ -183,23 +185,25 @@ class Scene(Serializable):
             proj_index=proj_index
         )
 
-    def format(self, names: NameUtil) -> Tuple[Dict[str, Document], NameUtil]:
+    def format(self, names: NameUtil, progress: ProgressTracker) -> Tuple[Dict[str, Document], NameUtil]:
         scene_names = SceneNameUtil(names)
         for actor in self.actors:
             if actor.name == "":
-                scene_names.add_actor(str(actor.id), "actor-" + str(self.actors.index(actor)))
+                scene_names.add_actor(str(actor.id), "actor-" + str(self.actors.index(actor)), progress)
             else:
                 scene_names.add_actor(
                     str(actor.id),
-                    sanitize_name(actor.name, names.scene_for_id(str(self.id)) + " actor")
+                    sanitize_name(actor.name, names.scene_for_id(str(self.id)) + " actor"),
+                    progress
                 )
         for trigger in self.triggers:
             if trigger.name == "":
-                scene_names.add_trigger(str(trigger.id), "trigger-" + str(self.triggers.index(trigger)))
+                scene_names.add_trigger(str(trigger.id), "trigger-" + str(self.triggers.index(trigger)), progress)
             else:
                 scene_names.add_actor(
                     str(trigger.id),
-                    sanitize_name(trigger.name, names.scene_for_id(str(self.id)) + " trigger")
+                    sanitize_name(trigger.name, names.scene_for_id(str(self.id)) + " trigger"),
+                    progress
                 )
         meta = Document(preserve_property_order=True)
         meta.extend([
@@ -239,8 +243,9 @@ class Scene(Serializable):
                 index = (self.width * y) + x
                 if hasCollisions:
                     if index > len(self.collisions) - 1:
-                        print("Tried to access index " + str(index) + " of collision list " + str(len(self.collisions))
-                              + " long in scene `" + self.name + "` ! This shouldn't be possible!")
+                        progress.log_error("Tried to access index " + str(index) + " of collision list "
+                                           + str(len(self.collisions)) + " long in scene `" + self.name
+                                           + "` ! This shouldn't be possible!")
                         break
                     collision = self.collisions[index]
                     if collision & 0xF == 0xF:
@@ -283,23 +288,25 @@ class Scene(Serializable):
         return docs, scene_names
 
     @staticmethod
-    def parse(docs: Dict[str, Document], names: NameUtil, scene_dir: str) -> "Scene":
+    def parse(docs: Dict[str, Document], names: NameUtil, scene_dir: str, progress: ProgressTracker) -> "Scene":
         scene_names = SceneNameUtil(names)
         # Even more chicken-egg NameUtil hell! Aaaaaaaaaaaaaaaaaaaaa
         if os.path.exists(scene_dir + "/actors"):
             actor_dirs = [i.name for i in os.scandir(scene_dir + "/actors") if i.is_dir()]
             for i in actor_dirs:
+                progress.set_status("Parsing meta for scene " + scene_dir.split("/")[-1] + " actor '" + i + "'")
                 with open(scene_dir + "/actors/" + i + "/meta.kdl") as meta:
                     contents = map_nodes(parse(meta))
-                    scene_names.add_actor(contents["id"], i)
+                    scene_names.add_actor(contents["id"], i, progress)
         else:
             actor_dirs = []
         if os.path.exists(scene_dir + "/trigges"):
             trigger_dirs = [i.name for i in os.scandir(scene_dir + "/triggers") if i.is_dir()]
             for i in trigger_dirs:
+                progress.set_status("Parsing meta for scene " + scene_dir.split("/")[-1] + " trigger '" + i + "'")
                 with open(scene_dir + "/triggers/" + i + "/meta.kdl") as meta:
                     contents = map_nodes(parse(meta))
-                    scene_names.add_trigger(contents["id"], i)
+                    scene_names.add_trigger(contents["id"], i, progress)
         else:
             trigger_dirs = []
         contents = map_nodes(docs["meta"])
@@ -353,35 +360,37 @@ class Scene(Serializable):
         else:
             tile_colors = []
         if "init" in docs:
-            script = [Event.parse(i, scene_names) for i in docs["init"]]
+            script = [Event.parse(i, scene_names, progress) for i in docs["init"]]
         else:
             script = []
         if "player-hit-1" in docs:
-            player_hit1_script = [Event.parse(i, scene_names) for i in docs["player-hit-1"]]
+            player_hit1_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-1"]]
         else:
             player_hit1_script = []
         if "player-hit-2" in docs:
-            player_hit2_script = [Event.parse(i, scene_names) for i in docs["player-hit-2"]]
+            player_hit2_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-2"]]
         else:
             player_hit2_script = []
         if "player-hit-3" in docs:
-            player_hit3_script = [Event.parse(i, scene_names) for i in docs["player-hit-3"]]
+            player_hit3_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-3"]]
         else:
             player_hit3_script = []
         # Finally time for the actors and triggers!
         actors: List[Optional[Actor]] = [None for _ in range(len(actor_dirs))]
         for dir in actor_dirs:
+            progress.set_status("Parsing scripts for scene " + scene_dir.split("/")[-1] + " actor '" + dir + "'")
             actor_dir = scene_dir + "/actors/" + dir
             docs = {i.name[:-4]: parse(open(actor_dir + "/" + i.name)) for i in os.scandir(actor_dir)
                     if i.is_file() and i.name.endswith(".kdl")}
-            actor = Actor.parse(docs, scene_names)
+            actor = Actor.parse(docs, scene_names, progress)
             actors[actor.scene_index] = actor
         triggers: List[Optional[Trigger]] = [None for _ in range(len(trigger_dirs))]
         for dir in trigger_dirs:
+            progress.set_status("Parsing scripts for scene " + scene_dir.split("/")[-1] + " trigger '" + dir + "'")
             trigger_dir = scene_dir + "/triggers/" + dir
             docs = {i.name[:-4]: parse(open(trigger_dir + "/" + i.name)) for i in os.scandir(trigger_dir)
                     if i.is_file() and i.name.endswith(".kdl")}
-            trigger = Trigger.parse(docs, scene_names)
+            trigger = Trigger.parse(docs, scene_names, progress)
             triggers[trigger.scene_index] = trigger
         return Scene(
             id=id,

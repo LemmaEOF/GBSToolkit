@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import platform
+from queue import SimpleQueue
 import re
+from tkinter import StringVar
 from typing import Any, Dict, List, Optional, Union
 
 from kdl import Document, Node
@@ -48,7 +50,7 @@ class NameUtil(ABC):
         return NotImplemented
 
     @abstractmethod
-    def safe_custom_event_name(self, id: str) -> str:
+    def raw_custom_event_name(self, name: str) -> str:
         return NotImplemented
 
     @abstractmethod
@@ -97,6 +99,71 @@ class NodeData:
     props: Optional[Dict[str, JsonSafe]]
     args: Optional[List[JsonSafe]]
     children: Optional[List[Node]] = None
+
+
+class ProgressTracker(ABC):
+    def __init__(self):
+        self._current_scene = None
+
+    @property
+    def current_scene(self):
+        return self._current_scene
+
+    @current_scene.setter
+    def current_scene(self, val):
+        self._current_scene = val
+
+    @abstractmethod
+    def set_status(self, status: str):
+        return NotImplemented
+
+    @abstractmethod
+    def log_error(self, error: str):
+        return NotImplemented
+
+    @abstractmethod
+    def flag_missing_command(self, command: str):
+        return NotImplemented
+
+
+class PrintProgressTracker(ProgressTracker):
+    def __init__(self):
+        super().__init__()
+        self.known_missing_commands = []
+
+    def set_status(self, status: str):
+        print(status)
+
+    def log_error(self, error: str):
+        print("Error: " + error)
+
+    def flag_missing_command(self, command: str):
+        if command not in self.known_missing_commands:
+            self.known_missing_commands.append(command)
+            self.log_error("Attempted to parse unknown command '" + command
+                           + "'. Arguments may be parsed incorrectly! If you are using a plugin, please let either "
+                           + "LemmaEOF or the plugin dev know to add compat!")
+
+
+class QueueProgressTracker(ProgressTracker):
+    def __init__(self, status: SimpleQueue, errors: SimpleQueue):
+        super().__init__()
+        self.status = status
+        self.errors = errors
+        self.known_missing_commands = []
+
+    def set_status(self, status: str):
+        self.status.put(status)
+
+    def log_error(self, error: str):
+        self.errors.put(error)
+
+    def flag_missing_command(self, command: str):
+        if command not in self.known_missing_commands:
+            self.known_missing_commands.append(command)
+            self.errors.put("Attempted to parse unknown command '" + command
+                            + "'. Arguments may be parsed incorrectly! If you are using a plugin, please let either "
+                            + "LemmaEOF or the plugin dev know to add compat!")
 
 
 class FormatError(Exception):

@@ -631,10 +631,10 @@ class CallCustomEventCommand(Command):
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         ret = {
             "customEventId": names.id_for_custom_event(data.args[0]),
-            "__name": names.safe_custom_event_name(data.args[0])
+            "__name": names.raw_custom_event_name(data.args[0])
         }
         if data.props is not None:
-            for k, v in data.props:
+            for k, v in data.props.items():
                 if k.startswith("var"):
                     ret["$variable[" + k[3:] + "]$"] = v[1:-1]
                 elif k.startswith("actor"):
@@ -701,11 +701,11 @@ class CameraShakeCommand(Command):
 
     @staticmethod
     def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
-        return NodeData(None, [args["shakeDirection"], args["time"]])
+        return NodeData(None, [args["time"], args["shakeDirection"] if "shakeDirection" in args else "horizontal"])
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+        return {"time": data.args[0], "shakeDirection": data.args[1]}
 
 
 class CommentCommand(Command):

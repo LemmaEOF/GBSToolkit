@@ -7,7 +7,7 @@ from kdl import Document
 
 from .event import Event
 from .marshalling import JsonSafe, serialize, Serializable
-from .util import NameUtil, prop_node, map_nodes
+from .util import NameUtil, ProgressTracker, prop_node, map_nodes
 
 
 @dataclass
@@ -75,10 +75,10 @@ class Trigger(Serializable):
         return docs
 
     @staticmethod
-    def parse(docs: Dict[str, Document], names: NameUtil) -> "Trigger":
+    def parse(docs: Dict[str, Document], names: NameUtil, progress: ProgressTracker) -> "Trigger":
         meta = docs["meta"]
         contents = map_nodes(meta)
-        script = [Event.parse(i, names) for i in docs["interact"]] if "interact" in docs else []
+        script = [Event.parse(i, names, progress) for i in docs["interact"]] if "interact" in docs else []
         return Trigger(
             id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=contents["name"] if "name" in contents else "",

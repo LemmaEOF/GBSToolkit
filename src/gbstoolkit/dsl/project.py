@@ -10,7 +10,7 @@ from .marshalling import JsonSafe, serialize, Serializable
 from .palette import Palette
 from .scene import Scene
 from .settings import Settings
-from .util import NameUtil, ProtoEvent, prop_node, map_nodes, sanitize_name
+from .util import NameUtil, ProgressTracker, ProtoEvent, prop_node, map_nodes, sanitize_name
 
 
 class ProjectNameUtil(NameUtil):
@@ -37,10 +37,10 @@ class ProjectNameUtil(NameUtil):
         self.id_to_background[id] = name
         self.background_to_id[name] = id
 
-    def add_custom_event(self, id: str, name: str):
+    def add_custom_event(self, id: str, name: str, progress: ProgressTracker):
         if name in self.custom_event_name_counts:
-            print("Custom event name '" + name + "' Already exists! Renaming to `" + name + "-"
-                  + str(self.custom_event_name_counts[name] + 1) + "`!")
+            progress.log_error("Custom event name '" + name + "' Already exists! Renaming to `" + name + "-"
+                               + str(self.custom_event_name_counts[name] + 1) + "`!")
             self.custom_event_name_counts[name] += 1
             name += "-" + str(self.custom_event_name_counts[name])
         else:
@@ -48,14 +48,14 @@ class ProjectNameUtil(NameUtil):
         self.id_to_custom_event[id] = name
         self.custom_event_to_id[name] = id
 
-    def add_event_script(self, id: str, safe_name: str, script: List[ProtoEvent]):
-        self.custom_event_names[id] = safe_name
+    def add_event_script(self, id: str, raw_name: str, script: List[ProtoEvent]):
+        self.custom_event_names[id] = raw_name
         self.custom_event_scripts[id] = script
 
-    def add_palette(self, id: str, name: str):
+    def add_palette(self, id: str, name: str, progress: ProgressTracker):
         if name in self.palette_name_counts:
-            print("Palette name '" + name + "' Already exists! Renaming to `" + name + "-"
-                  + str(self.palette_name_counts[name] + 1) + "`!")
+            progress.log_error("Palette name '" + name + "' Already exists! Renaming to `" + name + "-"
+                               + str(self.palette_name_counts[name] + 1) + "`!")
             self.palette_name_counts[name] += 1
             name += "-" + str(self.palette_name_counts[name])
         else:
@@ -63,10 +63,10 @@ class ProjectNameUtil(NameUtil):
         self.id_to_palette[id] = name
         self.palette_to_id[name] = id
 
-    def add_scene(self, id: str, name: str):
+    def add_scene(self, id: str, name: str, progress: ProgressTracker):
         if name in self.scene_name_counts:
-            print("Scene name '" + name + "' Already exists! Renaming to " + name + "-"
-                  + str(self.scene_name_counts[name] + 1))
+            progress.log_error("Scene name '" + name + "' Already exists! Renaming to " + name + "-"
+                               + str(self.scene_name_counts[name] + 1))
             self.scene_name_counts[name] += 1
             name += "-" + str(self.scene_name_counts[name])
         else:
@@ -107,8 +107,8 @@ class ProjectNameUtil(NameUtil):
     def script_for_custom_event(self, id: str) -> List[ProtoEvent]:
         return self.custom_event_scripts[id]
 
-    def safe_custom_event_name(self, id: str) -> str:
-        return self.custom_event_names[id]
+    def raw_custom_event_name(self, name: str) -> str:
+        return self.custom_event_names[self.custom_event_to_id[name]]
 
     def palette_for_id(self, id: str) -> str:
         return self.id_to_palette[id]
@@ -197,25 +197,25 @@ class Project(Serializable):
             settings=Settings.deserialize(obj["settings"])
         )
 
-    def format(self) -> Tuple[Dict[str, Document], NameUtil]:
+    def format(self, progress: ProgressTracker) -> Tuple[Dict[str, Document], NameUtil]:
         names = ProjectNameUtil()
         for background in self.backgrounds:
             names.add_background(str(background.id), background.name)
         for event in self.custom_events:
             if event.name == "":
-                names.add_custom_event(str(event.id), "custom-event-" + str(self.custom_events.index(event)))
+                names.add_custom_event(str(event.id), "custom-event-" + str(self.custom_events.index(event)), progress)
             else:
-                names.add_custom_event(str(event.id), sanitize_name(event.name, "custom event"))
+                names.add_custom_event(str(event.id), sanitize_name(event.name, "custom event"), progress)
         for palette in self.palettes:
             if palette.name == "":
-                names.add_palette(str(palette.id), "palette-" + str(self.palettes.index(palette)))
+                names.add_palette(str(palette.id), "palette-" + str(self.palettes.index(palette)), progress)
             else:
-                names.add_palette(str(palette.id), sanitize_name(palette.name, "palette"))
+                names.add_palette(str(palette.id), sanitize_name(palette.name, "palette"), progress)
         for scene in self.scenes:
             if scene.name == "":
-                names.add_scene(str(scene.id), "scene-" + str(self.scenes.index(scene)))
+                names.add_scene(str(scene.id), "scene-" + str(self.scenes.index(scene)), progress)
             else:
-                names.add_scene(str(scene.id), sanitize_name(scene.name, "scene"))
+                names.add_scene(str(scene.id), sanitize_name(scene.name, "scene"), progress)
         for song in self.music:
             names.add_song(str(song.id), song.name)
         for sprite in self.sprite_sheets:
@@ -250,7 +250,7 @@ class Project(Serializable):
         return docs, names
 
     @staticmethod
-    def parse(docs: Dict[str, Document], project_root: str) -> "Project":
+    def parse(docs: Dict[str, Document], project_root: str, progress: ProgressTracker) -> "Project":
         meta = map_nodes(docs["project"])
         backgrounds = [Background.parse(i) for i in docs["backgrounds"]]
         sprite_sheets = [SpriteSheet.parse(i) for i in docs["sprite-sheets"]]
@@ -262,9 +262,9 @@ class Project(Serializable):
             names.add_background(str(background.id), background.name)
         for palette in palettes:
             if palette.name == "":
-                names.add_palette(str(palette.id), "palette-" + str(palettes.index(palette)))
+                names.add_palette(str(palette.id), "palette-" + str(palettes.index(palette)), progress)
             else:
-                names.add_palette(str(palette.id), sanitize_name(palette.name, "palette"))
+                names.add_palette(str(palette.id), sanitize_name(palette.name, "palette"), progress)
         for song in music:
             names.add_song(str(song.id), song.name)
         for sprite in sprite_sheets:
@@ -272,34 +272,37 @@ class Project(Serializable):
         # Chicken-egg hell: have to do a first light pass of scenes to get the IDs into NameUtil before custom events
         scene_dirs = [i.name for i in os.scandir(project_root + "/scenes") if i.is_dir()]
         for i in scene_dirs:
+            progress.set_status("Parsing meta for scene '" + i + "'")
             with open(project_root + "/scenes/" + i + "/meta.kdl") as scene_meta:
                 doc = parse(scene_meta)
                 contents = map_nodes(doc)
                 if "id" in contents:
-                    names.add_scene(contents["id"], i)
+                    names.add_scene(contents["id"], i, progress)
         # More chicken-egg hell: have to do a light first pass of custom events to get the IDs into NameUtil too! aaa
         event_files = [i.name for i in os.scandir(project_root + "/custom-events")]
         event_docs = []
         for i in event_files:
+            progress.set_status("Parsing custom event '" + i + "'")
             with open(project_root + "/custom-events/" + i) as event:
                 doc = parse(event)
                 event_docs.append(doc)
                 contents = map_nodes(doc)
-                names.add_custom_event(contents["id"], sanitize_name(contents["name"], "custom event"))
+                names.add_custom_event(contents["id"], sanitize_name(contents["name"], "custom event"), progress)
         # NameUtil should be safe! We can parse stuff using them now~
         settings = Settings.parse([i for i in docs["project"] if i.name == "settings"][0].children, names)
         custom_events: List[Optional[CustomEvent]] = [None for _ in range(len(event_docs))]
         for i in event_docs:
-            event = CustomEvent.parse(i, names)
+            event = CustomEvent.parse(i, names, progress)
             custom_events[event.proj_index] = event
             # theoretically no race condition worry - nested custom event calls are illegal
             names.add_event_script(str(event.id), event.name, [i.protofy() for i in event.script])
         scenes: List[Optional[Scene]] = [None for _ in range(len(scene_dirs))]
         for i in scene_dirs:
+            progress.set_status("Parsing contents for scene '" + i + "'")
             scene_dir = project_root + "/scenes/" + i
             scene_docs = {i.name[:-4]: parse(open(scene_dir + "/" + i.name)) for i in os.scandir(scene_dir)
                           if i.is_file() and i.name.endswith(".kdl")}
-            scene = Scene.parse(scene_docs, names, scene_dir)
+            scene = Scene.parse(scene_docs, names, scene_dir, progress)
             scenes[scene.proj_index] = scene
         return Project(
             name=meta["name"],
