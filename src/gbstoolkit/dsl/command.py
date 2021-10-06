@@ -1116,6 +1116,162 @@ class IfSavedDataCommand(Command):
         return ret
 
 
+class IfInputCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_INPUT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifAnyPressed"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"input": List[str]}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            args["input"]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"input": data.args}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
+class ifVariableCompareCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_VALUE_COMPARE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifCompare"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"vectorX": str, "operation": str, "vectorY": str}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            ["$" + args["vectorX"] + "$", args["operation"], "$" + args["vectorY"] + "$"]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"vectorX": data.args[0][1:-1], "operation": data.args[1], "vectorY": data.args[2][1:-1]}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
+class IfVariableFalseCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_FALSE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifFalse"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"variable": str}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            args["$" + args["variable"] + "$"]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"variable": data.args[0][1:-1]}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
+class IfVariableTrueCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_TRUE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifTrue"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"variable": str}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            args["$" + args["variable"] + "$"]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"variable": data.args[0][1:-1]}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
 class TextDialogueCommand(Command):
     @staticmethod
     def name() -> str:
