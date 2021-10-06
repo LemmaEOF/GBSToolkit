@@ -50,6 +50,45 @@ class MoveType(SerializableEnum):
         return MoveType(obj)
 
 
+class RelativeActorPosition(SerializableEnum):
+    ABOVE = ("up", "above")
+    BELOW = ("down", "below")
+    LEFT_OF = ("left", "left_of")
+    RIGHT_OF = ("right", "right_of")
+
+    def serialize(self) -> str:
+        return self.value[0]
+
+    @staticmethod
+    def deserialize(obj: str) -> "RelativeActorPosition":
+        if obj == "up":
+            return RelativeActorPosition.ABOVE
+        if obj == "down":
+            return RelativeActorPosition.BELOW
+        if obj == "left":
+            return RelativeActorPosition.LEFT_OF
+        if obj == "right":
+            return RelativeActorPosition.RIGHT_OF
+        raise KeyError("Couldn't find relative actor position for value '" + obj + "'")
+
+    @staticmethod
+    def format(obj: str) -> str:
+        pos = RelativeActorPosition.deserialize(obj)
+        return pos.value[1]
+
+    @staticmethod
+    def parse(obj: str) -> str:
+        if obj == "above":
+            return RelativeActorPosition.ABOVE.serialize()
+        if obj == "below":
+            return RelativeActorPosition.BELOW.serialize()
+        if obj == "left_of":
+            return RelativeActorPosition.LEFT_OF.serialize()
+        if obj == "right_of":
+            return RelativeActorPosition.RIGHT_OF.serialize()
+        raise KeyError("Couldn't find relative actor position for value '" + obj + "'")
+
+
 class SceneType(SerializableEnum):  # TODO: swap names in V3!
     TOP_DOWN = "0"  # "TOPDOWN"
     PLATFORMING = "1"  # "PLATFORM"

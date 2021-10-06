@@ -1,3 +1,4 @@
+# TODO: I should really split this up into separate files for each category huh, this is becoming kinda a godclass
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Dict, List, Optional, Union
 from uuid import UUID
@@ -5,7 +6,7 @@ from uuid import UUID
 from kdl import Node
 
 from .datatypes import ActorID, UnionArgument
-from .enums import Direction, MoveType
+from .enums import Direction, MoveType, RelativeActorPosition
 from .marshalling import JsonSafe, serialize
 from .util import NameUtil, NodeData, command_to_keyword
 
@@ -896,6 +897,10 @@ class GroupCommand(Command):
         return "group"
 
     @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true"]
+
+    @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
         return None
 
@@ -907,6 +912,130 @@ class GroupCommand(Command):
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         return None
 
+
+class IfActorAtPositionCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_ACTOR_AT_POSITION"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifActorAtPosition"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"actorId": ActorID, "x": int, "y": int}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            [names.actor_for_id(args["actorId"]), args["x"], args["y"]]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"actorId": names.id_for_actor(data.args[0]), "x": data.args[1], "y": data.args[2]}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
+class IfActorFacing(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_ACTOR_DIRECTION"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifActorFacing"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"actorId": ActorID, "direction": Direction}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            [names.actor_for_id(args["actorId"]), args["direction"]]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"actorId": names.id_for_actor(data.args[0]), "direction": data.args[1]}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
+class IfActorRelativeTo(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_ACTOR_RELATIVE_TO_ACTOR"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifActorRelativeTo"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"actorId": ActorID, "otherActorId": ActorID, "operation": RelativeActorPosition}
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            [
+                names.actor_for_id(args["actorId"]),
+                RelativeActorPosition.format(args["operation"]),
+                names.actor_for_id(args["otherActorId"])
+            ]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {
+            "actorId": names.id_for_actor(data.args[0]),
+            "operation": RelativeActorPosition.parse(data.args[1]),
+            "otherActorId": names.id_for_actor(data.args[1])
+        }
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
 
 
 class TextDialogueCommand(Command):
