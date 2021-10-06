@@ -1038,6 +1038,84 @@ class IfActorRelativeTo(Command):
         return ret
 
 
+class IfColorSupportedCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_COLOR_SUPPORTED"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifColorSupported"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            None
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
+class IfSavedDataCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_SAVED_DATA"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifSaveExists"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            None
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
 class TextDialogueCommand(Command):
     @staticmethod
     def name() -> str:
