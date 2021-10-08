@@ -15,13 +15,6 @@ COMMANDS: Dict[str, "Command"] = {}  # Fills in automatically by subclassing Com
 KEYWORDS: Dict[str, "Command"] = {}
 
 
-# TODO: Better way to handle this in the future for compound data types! Type inference based on name?
-def emergency_flatten(obj: JsonSafe) -> Union[int, float, str]:
-    if type(obj) == int or type(obj) == float or type(obj) == str:
-        return obj
-    return str(obj)
-
-
 # Should only ever autoregister Command instances, so if not then we've got a looot more problems on our hands
 class AutoRegister(ABCMeta):
     def __init__(cls, name, bases, clsdict):
@@ -61,7 +54,7 @@ class Command(ABC, metaclass=AutoRegister):
 
     @staticmethod
     @abstractmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NotImplemented
 
     @staticmethod
@@ -88,15 +81,58 @@ class Fallback(Command):
         return None
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
-        return NodeData(
-            {k: emergency_flatten(v) for k, v in args.items()} if args is not None else None,
-            None
-        )
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        if args is not None:
+            children = []
+            for k, v in args.items():
+                if isinstance(v, dict):
+                    data = Fallback.format(v, names)
+                    children.append(Node(k, data.props, data.args, data.children))
+                elif isinstance(v, list):
+                    children.append(Node(k, {"__type": "list"}, None, Fallback.format_list(v, names)))
+                else:
+                    children.append(Node(k, None, [v], None))
+            return NodeData(None, None, children)
+        return NodeData(None, None, None)
+
+    @staticmethod
+    def format_list(entries: List[JsonSafe], names: NameUtil) -> List[Node]:
+        ret = []
+        for i in entries:
+            if isinstance(i, dict):
+                ret.append(Node("entry", None, None, Fallback.format(i, names)))
+            elif isinstance(i, list):
+                ret.append(Node("entry", {"__type": "list"}, None, Fallback.format_list(i, names)))
+            else:
+                ret.append(Node("entry", None, [i], None))
+        return ret
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return {k: v for k, v in data.props.items() if k != "__eventid"}
+        ret = {}
+        if data.children is not None:
+            for node in data.children:
+                if node.children is not None:
+                    if node.properties is not None and "__type" in node.properties and node.properties["__type"] == "list":
+                        ret[node.name] = Fallback.parse_list(node.children, names)
+                    else:
+                        ret[node.name] = Fallback.parse(NodeData(None, None, node.children))
+                else:
+                    ret[node.name] = node.arguments[0]
+        return ret
+
+    @staticmethod
+    def parse_list(children: List[Node], names: NameUtil) -> List[JsonSafe]:
+        ret = []
+        for node in children:
+            if node.children is not None:
+                if node.properties is not None and "__type" in node.properties and node.properties["__type"] == "list":
+                    ret.append(Fallback.parse_list(node.children, names))
+                else:
+                    ret.append(Fallback.parse(NodeData(None, None, node.children)))
+            else:
+                ret[node.name] = node.arguments[0]
+        return ret
 
 
 class ActorCollisionsDisableCommand(Command):
@@ -113,7 +149,7 @@ class ActorCollisionsDisableCommand(Command):
         return {"actorId": ActorID}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
@@ -135,7 +171,7 @@ class ActorCollisionsEnableCommand(Command):
         return {"actorId": ActorID}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
@@ -157,7 +193,7 @@ class ActorEmoteCommand(Command):
         return {"actorId": ActorID, "emoteId": str}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), args["emoteId"]])
 
     @staticmethod
@@ -179,7 +215,7 @@ class ActorGetDirectionCommand(Command):
         return {"actorId": ActorID, "direction": str}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), args["direction"]])
 
     @staticmethod
@@ -201,7 +237,7 @@ class ActorGetPositionCommand(Command):
         return {"actorId": ActorID, "vectorX": str, "VectorY": str}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), args["vectorX"], args["vectorY"]])
 
     @staticmethod
@@ -227,7 +263,7 @@ class ActorHideCommand(Command):
         return {"actorId": ActorID}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
@@ -251,7 +287,7 @@ class ActorInvokeCommand(Command):
         return {"actorId": ActorID}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
@@ -276,7 +312,7 @@ class ActorMoveRelativeCommand(Command):
         return {"actorId": ActorID, "x": int, "y": int, "moveType": MoveType, "useCollisions": bool}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         if "verticalFirst" in args:
             args["moveType"] = "vertical" if args["verticalFirst"] else "horizontal"
         return NodeData(
@@ -322,7 +358,7 @@ class ActorMoveToCommand(Command):
         }
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(
             {"type": serialize(args["moveType"]), "collisions": args["useCollisions"]},
             [
@@ -363,7 +399,7 @@ class ActorPushCommand(Command):
         return {"continue": bool}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(args, None)
 
     @staticmethod
@@ -385,7 +421,7 @@ class ActorSetAnimateCommand(Command):
         return {"actorId": ActorID, "animate": bool}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), args["animate"]])
 
     @staticmethod
@@ -407,7 +443,7 @@ class ActorSetAnimationSpeedCommand(Command):
         return {"actorId": ActorID, "animSpeed": Union[None, int]}  # range null and 0-4
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), args["animSpeed"]])
 
     @staticmethod
@@ -429,7 +465,7 @@ class ActorSetDirectionCommand(Command):
         return {"actorId": ActorID, "direction": UnionArgument[Direction]}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), UnionArgument.format(args["direction"], names)])
 
     @staticmethod
@@ -451,7 +487,7 @@ class ActorSetFrameCommand(Command):
         return {"actorId": ActorID, "frame": UnionArgument[int]}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), UnionArgument.format(args["frame"], names)])
 
     @staticmethod
@@ -473,7 +509,7 @@ class ActorSetMovementSpeedCommand(Command):
         return {"actorId": ActorID, "speed": int}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), args["speed"]])
 
     @staticmethod
@@ -495,7 +531,7 @@ class ActorSetPositionCommand(Command):
         return {"actorId": ActorID, "x": UnionArgument[int], "y": UnionArgument[int]}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(
             None,
             [
@@ -528,7 +564,7 @@ class ActorSetPositionRelativeCommand(Command):
         return {"actorId": ActorID, "x": int, "y": int}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), args["x"], args["y"]])
 
     @staticmethod
@@ -550,7 +586,7 @@ class ActorSetSpriteCommand(Command):
         return {"actorId": ActorID, "spriteSheetId": UUID}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"]), names.sprite_for_id(args["spriteSheetId"])])
 
     @staticmethod
@@ -572,7 +608,7 @@ class ActorShowCommand(Command):
         return {"actorId": ActorID}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
@@ -594,7 +630,7 @@ class ActorStopUpdateScriptCommand(Command):
         return {"actorId": ActorID}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [names.actor_for_id(args["actorId"])])
 
     @staticmethod
@@ -616,7 +652,7 @@ class CallCustomEventCommand(Command):
         return {"customEventId": UUID}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         if len(args) > 2:
             props = {}
             for k, v in args.items():
@@ -657,7 +693,7 @@ class CameraLockCommand(Command):
         return {"speed": int}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [args["speed"]])
 
     @staticmethod
@@ -679,7 +715,7 @@ class CameraMoveToCommand(Command):
         return {"x": int, "y": int, "speed": int}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData({"speed": args["speed"]}, [args["x"], args["y"]])
 
     @staticmethod
@@ -701,7 +737,7 @@ class CameraShakeCommand(Command):
         return {"shakeDirection": MoveType, "time": float}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [args["time"], args["shakeDirection"] if "shakeDirection" in args else "horizontal"])
 
     @staticmethod
@@ -723,7 +759,7 @@ class CommentCommand(Command):
         return {"text": str}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [args["text"]])
 
     @staticmethod
@@ -745,7 +781,7 @@ class DataClearCommand(Command):
         return None
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, None)
 
     @staticmethod
@@ -767,7 +803,7 @@ class DataLoadCommand(Command):
         return None
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, None)
 
     @staticmethod
@@ -789,7 +825,7 @@ class DataSaveCommand(Command):
         return None
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, None)
 
     @staticmethod
@@ -798,48 +834,48 @@ class DataSaveCommand(Command):
 
 
 # TODO: engine field stuff
-class EngineFieldSetCommand(Command):
-    @staticmethod
-    def name() -> str:
-        return "EVENT_ENGINE_FIELD_SET"
-
-    @staticmethod
-    def keyword() -> str:
-        return "setEngineField"
-
-    @staticmethod
-    def required_args() -> Optional[Dict[str, type]]:
-        pass
-
-    @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
-        pass
-
-    @staticmethod
-    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
-
-
-class EngineFieldStoreCommand(Command):
-    @staticmethod
-    def name() -> str:
-        return "EVENT_ENGINE_FIELD_STORE"
-
-    @staticmethod
-    def keyword() -> str:
-        return "storeEngineField"
-
-    @staticmethod
-    def required_args() -> Optional[Dict[str, type]]:
-        pass
-
-    @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
-        pass
-
-    @staticmethod
-    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        pass
+# class EngineFieldSetCommand(Command):
+#     @staticmethod
+#     def name() -> str:
+#         return "EVENT_ENGINE_FIELD_SET"
+#
+#     @staticmethod
+#     def keyword() -> str:
+#         return "setEngineField"
+#
+#     @staticmethod
+#     def required_args() -> Optional[Dict[str, type]]:
+#         pass
+#
+#     @staticmethod
+#     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+#         pass
+#
+#     @staticmethod
+#     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+#         pass
+#
+#
+# class EngineFieldStoreCommand(Command):
+#     @staticmethod
+#     def name() -> str:
+#         return "EVENT_ENGINE_FIELD_STORE"
+#
+#     @staticmethod
+#     def keyword() -> str:
+#         return "storeEngineField"
+#
+#     @staticmethod
+#     def required_args() -> Optional[Dict[str, type]]:
+#         pass
+#
+#     @staticmethod
+#     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+#         pass
+#
+#     @staticmethod
+#     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+#         pass
 
 
 class FadeInCommand(Command):
@@ -856,7 +892,7 @@ class FadeInCommand(Command):
         return {"speed": int}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, [args["speed"]])
 
     @staticmethod
@@ -878,7 +914,7 @@ class FadeOutCommand(Command):
         return {"speed": int}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, args["speed"])
 
     @staticmethod
@@ -905,7 +941,7 @@ class GroupCommand(Command):
         return None
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         return NodeData(None, None)
 
     @staticmethod
@@ -931,7 +967,7 @@ class IfActorAtPositionCommand(Command):
         return {"actorId": ActorID, "x": int, "y": int}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -970,7 +1006,7 @@ class IfActorFacing(Command):
         return {"actorId": ActorID, "direction": Direction}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -1009,7 +1045,7 @@ class IfActorRelativeTo(Command):
         return {"actorId": ActorID, "otherActorId": ActorID, "operation": RelativeActorPosition}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -1056,7 +1092,7 @@ class IfColorSupportedCommand(Command):
         return None
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -1095,7 +1131,7 @@ class IfSavedDataCommand(Command):
         return None
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -1134,7 +1170,7 @@ class IfInputCommand(Command):
         return {"input": List[str]}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -1155,14 +1191,14 @@ class IfInputCommand(Command):
         return ret
 
 
-class ifVariableCompareCommand(Command):
+class IfVariableCompareCommand(Command):
     @staticmethod
     def name() -> str:
         return "EVENT_IF_VALUE_COMPARE"
 
     @staticmethod
     def keyword() -> str:
-        return "ifCompare"
+        return "ifCompareVars"
 
     @staticmethod
     def children_names() -> Optional[List[str]]:
@@ -1173,7 +1209,7 @@ class ifVariableCompareCommand(Command):
         return {"vectorX": str, "operation": str, "vectorY": str}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -1212,7 +1248,7 @@ class IfVariableFalseCommand(Command):
         return {"variable": str}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -1220,12 +1256,51 @@ class IfVariableFalseCommand(Command):
             props["__collapseElse"] = args["__collapseElse"]
         return NodeData(
             props,
-            args["$" + args["variable"] + "$"]
+            ["$" + args["variable"] + "$"]
         )
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         ret = {"variable": data.args[0][1:-1]}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
+class IfVariableFlagCompareCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_FLAGS_COMPARE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifFlag"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"variable": str, "flag": int}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            ["$" + args["variable"] + "$", args["flag"]]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"variable": data.args[0][1:-1], "flag": data.args[1]}
         if "__disableElse" in data.props:
             ret["__disableElse"] = data.props["__disableElse"]
         if "__collapseElse" in data.props:
@@ -1251,7 +1326,7 @@ class IfVariableTrueCommand(Command):
         return {"variable": str}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         props = {}
         if "__disableElse" in args:
             props["__disableElse"] = args["__disableElse"]
@@ -1272,6 +1347,368 @@ class IfVariableTrueCommand(Command):
         return ret
 
 
+class IfValueCompareCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_IF_VALUE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "ifValue"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true", "false"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"vectorX": str, "operation": str, "comparator": int}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        props = {}
+        if "__disableElse" in args:
+            props["__disableElse"] = args["__disableElse"]
+        if "__collapseElse" in args:
+            props["__collapseElse"] = args["__collapseElse"]
+        return NodeData(
+            props,
+            ["$" + args["vectorX"] + "$", args["operation"], args["comparator"]]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"vectorX": data.args[0][1:-1], "operation": data.args[1], "comparator": data.args[2]}
+        if "__disableElse" in data.props:
+            ret["__disableElse"] = data.props["__disableElse"]
+        if "__collapseElse" in data.props:
+            ret["__collapseElse"] = data.props["__collapseElse"]
+        return ret
+
+
+class InputAwaitCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_AWAIT_INPUT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "awaitInput"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"input": List[str]}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(None, args["input"])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"input": data.args}
+
+
+class InputScriptRemoveCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_REMOVE_INPUT_SCRIPT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "removeInputScript"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"input": List[str]}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(None, args["input"])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"input": data.args}
+
+
+class InputScriptSetCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_SET_INPUT_SCRIPT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "setInputScript"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true"]
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"input": List[str], "persist": bool}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData({"persist": args["persist"]}, args["input"])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"input": data.args, "persist": data.props["persist"] if "persist" in data.props else False}
+
+
+class LabelDefineCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_DEFINE_LABEL"
+
+    @staticmethod
+    def keyword() -> str:
+        return "label"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"label": str}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(None, [args["label"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"label": data.args[0]}
+
+
+class LabelGotoCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_GOTO_LABEL"
+
+    @staticmethod
+    def keyword() -> str:
+        return "goto"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"label": str}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(None, [args["label"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"label": data.args[0]}
+
+
+# TODO: this is hell we live in hell why does this have five args one of which is a list (impl me later)
+# commenting out so it uses fallback for now
+# class LaunchProjectileCommand(Command):
+#     @staticmethod
+#     def name() -> str:
+#         return "EVENT_LAUNCH_PROJECTILE"
+#
+#     @staticmethod
+#     def keyword() -> str:
+#         return "launchProjectile"
+#
+#     @staticmethod
+#     def required_args() -> Optional[Dict[str, type]]:
+#         return {
+#             "spriteSheetId": UUID,
+#             "actorId": ActorID,
+#             "direction": UnionArgument[Direction],
+#             "speed": int,
+#             "collisionGroup": str,
+#             "collisionMask": List[str]
+#         }
+#
+#     @staticmethod
+#     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+#         pass
+#
+#     @staticmethod
+#     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+#         pass
+
+
+class LoopCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_LOOP"
+
+    @staticmethod
+    def keyword() -> str:
+        return "loop"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(None, None)
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+class MenuCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_MENU"
+
+    @staticmethod
+    def keyword() -> str:
+        return "menu"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"variable": str, "items": int, "cancelOnLastOption": bool, "cancelOnB": bool, "layout": str}  # TODO: enum?
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(
+            {
+                "cancelOnLastOption": args["cancelOnLastOption"],
+                "cancelOnB": args["cancelOnB"],
+                "layout": args["layout"]
+            },
+            ["$" + args["variable"] + "$"],
+            [Node("option", None, [args["option" + str(i + 1)]], None) for i in range(args["items"])]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"variable": data.args[0][1:-1], "items": len(data.children)}
+        for node in data.children:
+            ret["option"+str(data.children.index(node)+1)] = node.arguments[0]
+        ret.update(
+            cancelOnLastOption=data.props["cancelOLastOption"],
+            cancelOnB=data.props["cancelOnB"],
+            layout=data.props["layout"]
+        )
+        return ret
+
+
+class MusicPlayCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_MUSIC_PLAY"
+
+    @staticmethod
+    def keyword() -> str:
+        return "playMusic"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"music": UUID, "loop": bool}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData({"loop": args["loop"]}, [names.song_for_id(args["music"])])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"music": names.id_for_song(data.args[0]), "loop": data.props["loop"]}
+
+
+class MusicStopCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_MUSIC_STOP"
+
+    @staticmethod
+    def keyword() -> str:
+        return "stopMusic"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(None, None)
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+class OverlayHideCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_OVERLAY_HIDE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "hideOverlay"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(None, None)
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+class OverlayMoveToCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_OVERLAY_MOVE_TO"
+
+    @staticmethod
+    def keyword() -> str:
+        return "moveOverlay"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"x": int, "y": int, "speed": str}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData({"speed": args["speed"]}, [args["x"], args["y"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"x": data.args[0], "y": data.args[1], "speed": data.props["speed"]}
+
+
+class OverlayShowCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_OVERLAY_SHOW"
+
+    @staticmethod
+    def keyword() -> str:
+        return "showOverlay"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"color": str, "x": int, "y": int}  # TODO: enum
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData({"color": args["color"]}, [args["x"], args["y"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+            "x": data.args[0],
+            "y": data.args[1],
+            "color": data.props["color"] if "color" in data.props else "black"
+        }
+
+
 class TextDialogueCommand(Command):
     @staticmethod
     def name() -> str:
@@ -1286,7 +1723,7 @@ class TextDialogueCommand(Command):
         return {"text": Union[str, List[str]], "avatarId": Optional[UUID]}
 
     @staticmethod
-    def format(args: Dict[str, JsonSafe], names: NameUtil) -> NodeData:
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         text = args["text"]
         node_args = [names.sprite_for_id(args["avatarId"])] if "avatarId" in args and args["avatarId"] != "" else []
         if type(text) == str:

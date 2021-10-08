@@ -44,7 +44,14 @@ class Event(Serializable):
         node_children = data.children
         if self.children is not None and self.command.name != "EVENT_CALL_CUSTOM_EVENT":
             if data.children is not None:
-                raise FormatError("event", self, "")
+                if isinstance(self.command, Fallback):
+                    fallback_children = []
+                    for k, v in self.children.items():
+                        children_list = [i.format(names) for i in v]
+                        fallback_children.append(Node(name=k, properties=None, arguments=None, children=children_list))
+                    node_children.append(Node("children", None, None, fallback_children))
+                else:
+                    raise FormatError("event", self, "")
             node_children = []
             for k, v in self.children.items():
                 children_list = [i.format(names) for i in v]
@@ -53,6 +60,7 @@ class Event(Serializable):
         props["__eventid"] = str(self.id)
         if isinstance(self.command, Fallback):
             keyword = self.command.fallback_keyword
+
         else:
             keyword = self.command.keyword()
         return Node(name=keyword, properties=props, arguments=data.args, children=node_children)
@@ -61,10 +69,18 @@ class Event(Serializable):
     def parse(node: Node, names: NameUtil, progress: ProgressTracker) -> "Event":
         command = KEYWORDS[node.name] if node.name in KEYWORDS else Fallback(keyword_to_command(node.name))
         children = None
-        if node.children is not None and (command.children_names() is not None or isinstance(command, Fallback)):
+        if node.children is not None and command.children_names() is not None:
             children = {}
             for child in node.children:
                 children[child.name] = [Event.parse(i, names, progress) for i in child.children]
+        elif isinstance(command, Fallback):
+            children_nodes = [i for i in node.children if i.name == "children"]
+            if len(children_nodes) > 0:
+                children = {}
+                children_node = children_nodes[-1]
+                for child in children_node.children:
+                    children[child.name] = [Event.parse(i, names, progress) for i in child.children]
+                node.children.remove(children_node)
         if node.properties is not None:
             id = UUID(node.properties["__eventid"]) if "__eventid" in node.properties else uuid.uuid4()
         else:
