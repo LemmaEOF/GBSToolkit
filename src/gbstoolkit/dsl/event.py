@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 from uuid import UUID
@@ -48,46 +49,46 @@ class Event(Serializable):
                     fallback_children = []
                     for k, v in self.children.items():
                         children_list = [i.format(names) for i in v]
-                        fallback_children.append(Node(name=k, properties=None, arguments=None, children=children_list))
-                    node_children.append(Node("children", None, None, fallback_children))
+                        fallback_children.append(Node(name=k, nodes=children_list))
+                    node_children.append(Node("children", nodes=fallback_children))
                 else:
                     raise FormatError("event", self, "")
             node_children = []
             for k, v in self.children.items():
                 children_list = [i.format(names) for i in v]
-                node_children.append(Node(name=k, properties=None, arguments=None, children=children_list))
-        props = data.props if data.props is not None else {}
+                node_children.append(Node(name=k, nodes=children_list))
+        props = data.props if data.props is not None else OrderedDict()
         props["__eventid"] = str(self.id)
         if isinstance(self.command, Fallback):
             keyword = self.command.fallback_keyword
 
         else:
             keyword = self.command.keyword()
-        return Node(name=keyword, properties=props, arguments=data.args, children=node_children)
+        return Node(name=keyword, props=props, args=data.args if data.args is not None else [], nodes=node_children)
 
     @staticmethod
     def parse(node: Node, names: NameUtil, progress: ProgressTracker) -> "Event":
         command = KEYWORDS[node.name] if node.name in KEYWORDS else Fallback(keyword_to_command(node.name))
         children = None
-        if node.children is not None and command.children_names() is not None:
+        if node.nodes is not None and command.children_names() is not None:
             children = {}
-            for child in node.children:
-                children[child.name] = [Event.parse(i, names, progress) for i in child.children]
+            for child in node.nodes:
+                children[child.name] = [Event.parse(i, names, progress) for i in child.nodes]
         elif isinstance(command, Fallback):
-            children_nodes = [i for i in node.children if i.name == "children"]
+            children_nodes = [i for i in node.nodes if i.name == "children"]
             if len(children_nodes) > 0:
                 children = {}
                 children_node = children_nodes[-1]
-                for child in children_node.children:
-                    children[child.name] = [Event.parse(i, names, progress) for i in child.children]
-                node.children.remove(children_node)
-        if node.properties is not None:
-            id = UUID(node.properties["__eventid"]) if "__eventid" in node.properties else uuid.uuid4()
+                for child in children_node.nodes:
+                    children[child.name] = [Event.parse(i, names, progress) for i in child.nodes]
+                node.nodes.remove(children_node)
+        if node.props is not None:
+            id = UUID(node.props["__eventid"]) if "__eventid" in node.props else uuid.uuid4()
         else:
             id = uuid.uuid4()
         if isinstance(command, Fallback):
             progress.flag_missing_command(command.fallback_keyword)
-        args = command.parse(NodeData(node.properties, node.arguments, node.children), names)
+        args = command.parse(NodeData(node.props, node.args, node.nodes), names)
         if command.name() == "EVENT_CALL_CUSTOM_EVENT":
             children = {"script": [Event.deprotofy(i)
                                    for i in names.script_for_custom_event(args["customEventId"])]}
@@ -138,28 +139,24 @@ class CustomEvent(Serializable):
         )
 
     def format(self, names: NameUtil) -> Document:
-        doc = Document(preserve_property_order=True)
-        doc.extend([
+        doc = Document()
+        doc.nodes.extend([
             prop_node("id", str(self.id)),
             prop_node("name", self.name),
             prop_node("description", self.description),
             prop_node("__index", self.proj_index)
         ])
         if len(self.variables) > 0:
-            doc.append(Node(
-                "variables",
-                None,
-                None,
-                [Node("$" + str(k) + "$", None, [v], None) for k, v in self.variables.items()]
+            doc.nodes.append(Node(
+                name="variables",
+                nodes=[Node("$" + str(k) + "$", args=[v]) for k, v in self.variables.items()]
             ))
         if len(self.actors) > 0:
-            doc.append(Node(
-                "actors",
-                None,
-                None,
-                [Node("$" + str(k) + "$", None, [v], None) for k, v in self.variables.items()]
+            doc.nodes.append(Node(
+                name="actors",
+                nodes=[Node(name="$" + str(k) + "$", args=[v]) for k, v in self.variables.items()]
             ))
-        doc.append(Node("script", None, None, [i.format(names) for i in self.script]))
+        doc.nodes.append(Node(name="script", nodes=[i.format(names) for i in self.script]))
         return doc
 
     @staticmethod
@@ -170,7 +167,7 @@ class CustomEvent(Serializable):
         description = contents["description"]
         variables = {int(k[1:-1]): v for k, v in contents["variables"].items()} if "variables" in contents else {}
         actors = {int(k[1:-1]): v for k, v in contents["actors"].items()} if "actors" in contents else {}
-        script_node = [i for i in doc if i.name == "script"][0]
-        script = [Event.parse(i, names, progress) for i in script_node]
+        script_node = [i for i in doc.nodes if i.name == "script"][0]
+        script = [Event.parse(i, names, progress) for i in script_node.nodes]
         proj_index = contents["__index"]
         return CustomEvent(id, name, description, variables, actors, script, proj_index)

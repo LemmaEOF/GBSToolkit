@@ -29,7 +29,6 @@ setuptools.setup(
     packages=setuptools.find_packages(where="src"),
     python_requires=">3.6",
     install_requires=[
-        # "kdl-py", TODO: have to do it ourselves because kdl-py is broken
-        "TatSu>=5.6.1"
+        "kdl-py"
     ]
 )

@@ -82,7 +82,7 @@ class Settings(Serializable):
         )
 
     def format(self, names: NameUtil) -> Node:
-        children = [
+        nodes = [
             prop_node("startScene", names.scene_for_id(str(self.start_scene_id))),
             prop_node("startX", self.start_x),
             prop_node("startY", self.start_y),
@@ -94,7 +94,7 @@ class Settings(Serializable):
             prop_node("__worldScrollY", self.world_scroll_y),
             prop_node("__zoom", self.zoom),
             prop_node("customColorsEnabled", self.custom_colors_enabled),
-            Node("defaultBackgroundPalettes", None, None, [
+            Node(name="defaultBackgroundPalettes", nodes=[
                 prop_node(
                     "palette" + str(self.default_background_palette_ids.index(i)),
                     names.palette_for_id(str(i))
@@ -102,14 +102,14 @@ class Settings(Serializable):
             ]),
             prop_node("defaultSpritePalette", names.palette_for_id(str(self.default_sprite_palette_id))),
             prop_node("defaultUIPalette", names.palette_for_id(str(self.default_ui_palette_id))),
-            Node("customColors", None, None, [
+            Node(name="customColors", nodes=[
                 prop_node("white", self.custom_colors_white),
                 prop_node("light", self.custom_colors_light),
                 prop_node("dark", self.custom_colors_dark),
                 prop_node("black", self.custom_colors_black)
             ])
         ]
-        return Node("settings", None, None, children)
+        return Node(name="settings", nodes=nodes)
 
     @staticmethod
     def parse(settings: List[Node], names: NameUtil) -> "Settings":

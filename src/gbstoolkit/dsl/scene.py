@@ -205,8 +205,8 @@ class Scene(Serializable):
                     sanitize_name(trigger.name, names.scene_for_id(str(self.id)) + " trigger"),
                     progress
                 )
-        meta = Document(preserve_property_order=True)
-        meta.extend([
+        meta = Document()
+        meta.nodes.extend([
             prop_node("id", serialize(self.id)),
             prop_node("name", self.name),
             prop_node("type", self.type.serialize()),
@@ -218,24 +218,20 @@ class Scene(Serializable):
             prop_node("__index", self.proj_index)
         ])
         if len(self.palette_ids) > 0:
-            meta.append(Node(
-                "palettes",
-                None,
-                None,
-                [Node(
-                    "palette" + str(self.palette_ids.index(i)),
-                    None,
-                    [names.palette_for_id(serialize(i))],
-                    None
+            meta.nodes.append(Node(
+                name="palettes",
+                nodes=[Node(
+                    name="palette" + str(self.palette_ids.index(i)),
+                    args=[names.palette_for_id(serialize(i))],
                 ) for i in self.palette_ids if i is not None]
             ))
         if self.notes is not None:
-            meta.append(prop_node("notes", self.notes))
+            meta.nodes.append(prop_node("notes", self.notes))
         if self.label_color is not None:
-            meta.append(prop_node("labelColor", self.label_color))
+            meta.nodes.append(prop_node("labelColor", self.label_color))
         docs = {"meta": meta}
-        collisions = Document(preserve_property_order=True)
-        tile_colors = Document(preserve_property_order=True)
+        collisions = Document()
+        tile_colors = Document()
         hasCollisions = len(self.collisions) > 0
         hasTileColors = len(self.tile_colors) > 0
         for y in range(self.height):
@@ -249,41 +245,41 @@ class Scene(Serializable):
                         break
                     collision = self.collisions[index]
                     if collision & 0xF == 0xF:
-                        collisions.append(Node("all", None, [x, y], None))
+                        collisions.nodes.append(Node(name="all", args=[x, y]))
                     elif collision > 0:
                         if collision & 0x1 > 0:
-                            collisions.append(Node("up", None, [x, y], None))
+                            collisions.nodes.append(Node(name="up", args=[x, y]))
                         elif collision & 0x2 > 0:
-                            collisions.append(Node("down", None, [x, y], None))
+                            collisions.nodes.append(Node(name="down", args=[x, y]))
                         elif collision & 0x4 > 0:
-                            collisions.append(Node("left", None, [x, y], None))
+                            collisions.nodes.append(Node(name="left", args=[x, y]))
                         elif collision & 0x8 > 0:
-                            collisions.append(Node("right", None, [x, y], None))
+                            collisions.nodes.append(Node(name="right", args=[x, y]))
                     if collision & 0x10 > 0:
-                        collisions.append(Node("ladder", None, [x, y], None))
+                        collisions.nodes.append(Node(name="ladder", args=[x, y]))
                 if hasTileColors:
                     color = self.tile_colors[index]
                     if color > 0:
-                        tile_colors.append(Node("palette" + str(color), None, [x, y], None))
-        if len(collisions) > 0:
+                        tile_colors.nodes.append(Node(name="palette" + str(color), args=[x, y]))
+        if len(collisions.nodes) > 0:
             docs["collisions"] = collisions
-        if len(tile_colors) > 0:
+        if len(tile_colors.nodes) > 0:
             docs["tile-colors"] = tile_colors
         if len(self.script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, scene_names) for i in self.script])
+            script = Document()
+            script.nodes.extend([Event.format(i, scene_names) for i in self.script])
             docs["init"] = script
         if len(self.player_hit1_script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, scene_names) for i in self.player_hit1_script])
+            script = Document()
+            script.nodes.extend([Event.format(i, scene_names) for i in self.player_hit1_script])
             docs["player-hit-1"] = script
         if len(self.player_hit2_script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, scene_names) for i in self.player_hit2_script])
+            script = Document()
+            script.nodes.extend([Event.format(i, scene_names) for i in self.player_hit2_script])
             docs["player-hit-2"] = script
         if len(self.player_hit3_script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, scene_names) for i in self.player_hit3_script])
+            script = Document()
+            script.nodes.extend([Event.format(i, scene_names) for i in self.player_hit3_script])
             docs["player-hit-3"] = script
         return docs, scene_names
 
@@ -296,7 +292,7 @@ class Scene(Serializable):
             for i in actor_dirs:
                 progress.set_status("Parsing meta for scene " + scene_dir.split("/")[-1] + " actor '" + i + "'")
                 with open(scene_dir + "/actors/" + i + "/meta.kdl") as meta:
-                    contents = map_nodes(parse(meta))
+                    contents = map_nodes(parse(meta.read()))
                     scene_names.add_actor(contents["id"], i, progress)
         else:
             actor_dirs = []
@@ -305,7 +301,7 @@ class Scene(Serializable):
             for i in trigger_dirs:
                 progress.set_status("Parsing meta for scene " + scene_dir.split("/")[-1] + " trigger '" + i + "'")
                 with open(scene_dir + "/triggers/" + i + "/meta.kdl") as meta:
-                    contents = map_nodes(parse(meta))
+                    contents = map_nodes(parse(meta.read()))
                     scene_names.add_trigger(contents["id"], i, progress)
         else:
             trigger_dirs = []
@@ -331,9 +327,9 @@ class Scene(Serializable):
         if "collisions" in docs:
             collisions = [0 for _ in range(width * height)]
             doc = docs["collisions"]
-            for node in doc:
-                node_x = node.arguments[0]
-                node_y = node.arguments[1]
+            for node in doc.nodes:
+                node_x = node.args[0]
+                node_y = node.args[1]
                 index = (width * node_y) + node_x
                 if node.name == "all":
                     collisions[index] |= 0xF
@@ -352,27 +348,27 @@ class Scene(Serializable):
         if "tile-colors" in docs:
             tile_colors = [0 for _ in range(width * height)]
             doc = docs["tile-colors"]
-            for node in doc:
-                node_x = node.arguments[0]
-                node_y = node.arguments[1]
+            for node in doc.nodes:
+                node_x = node.args[0]
+                node_y = node.args[1]
                 index = (width * node_y) + node_x
                 tile_colors[index] = int(node.name[-1])
         else:
             tile_colors = []
         if "init" in docs:
-            script = [Event.parse(i, scene_names, progress) for i in docs["init"]]
+            script = [Event.parse(i, scene_names, progress) for i in docs["init"].nodes]
         else:
             script = []
         if "player-hit-1" in docs:
-            player_hit1_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-1"]]
+            player_hit1_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-1"].nodes]
         else:
             player_hit1_script = []
         if "player-hit-2" in docs:
-            player_hit2_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-2"]]
+            player_hit2_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-2"].nodes]
         else:
             player_hit2_script = []
         if "player-hit-3" in docs:
-            player_hit3_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-3"]]
+            player_hit3_script = [Event.parse(i, scene_names, progress) for i in docs["player-hit-3"].nodes]
         else:
             player_hit3_script = []
         # Finally time for the actors and triggers!
@@ -380,7 +376,7 @@ class Scene(Serializable):
         for dir in actor_dirs:
             progress.set_status("Parsing scripts for scene " + scene_dir.split("/")[-1] + " actor '" + dir + "'")
             actor_dir = scene_dir + "/actors/" + dir
-            docs = {i.name[:-4]: parse(open(actor_dir + "/" + i.name)) for i in os.scandir(actor_dir)
+            docs = {i.name[:-4]: parse(open(actor_dir + "/" + i.name).read()) for i in os.scandir(actor_dir)
                     if i.is_file() and i.name.endswith(".kdl")}
             actor = Actor.parse(docs, scene_names, progress)
             actors[actor.scene_index] = actor
@@ -388,7 +384,7 @@ class Scene(Serializable):
         for dir in trigger_dirs:
             progress.set_status("Parsing scripts for scene " + scene_dir.split("/")[-1] + " trigger '" + dir + "'")
             trigger_dir = scene_dir + "/triggers/" + dir
-            docs = {i.name[:-4]: parse(open(trigger_dir + "/" + i.name)) for i in os.scandir(trigger_dir)
+            docs = {i.name[:-4]: parse(open(trigger_dir + "/" + i.name).read()) for i in os.scandir(trigger_dir)
                     if i.is_file() and i.name.endswith(".kdl")}
             trigger = Trigger.parse(docs, scene_names, progress)
             triggers[trigger.scene_index] = trigger

@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from dataclasses import dataclass
 import platform
 from queue import SimpleQueue
 import re
-from tkinter import StringVar
 from typing import Any, Dict, List, Optional, Union
 
 from kdl import Document, Node
@@ -96,8 +96,8 @@ class NameUtil(ABC):
 
 @dataclass
 class NodeData:
-    props: Optional[Dict[str, JsonSafe]]
-    args: Optional[List[JsonSafe]]
+    props: OrderedDict[str, Any]
+    args: List[JsonSafe]
     children: Optional[List[Node]] = None
 
 
@@ -196,14 +196,25 @@ def sanitize_name(name: str, context: str) -> str:
     return ret
 
 
+# TODO: more of these for safe parsing
+def format_dialogue(text: str) -> str:
+    return text.replace('Â…', '…')
+
+
+def parse_dialogue(text: str) -> str:
+    return text.replace('…', 'Â…').replace('\t', '')
+
+
 def prop_node(name: str, value: Any) -> Node:
-    return Node(name, None, [serialize(value)], None)
+    return Node(name, args=[serialize(value)])
 
 
 def map_nodes(doc: Union[Document, List[Node]]) -> Dict[str, JsonSafe]:
-    return {i.name: i.arguments[0] if i.arguments is not None and len(i.arguments) > 0 else map_nodes(i.children)
+    if isinstance(doc, Document):
+        doc = doc.nodes
+    return {i.name: i.args[0] if i.args is not None and len(i.args) > 0 else map_nodes(i.args)
             for i in doc
-            if (i.arguments is not None and len(i.arguments) > 0) or (i.children is not None and len(i.children) > 0)}
+            if (i.args is not None and len(i.args) > 0) or (i.nodes is not None and len(i.nodes) > 0)}
 
 
 def command_to_keyword(name: str) -> str:

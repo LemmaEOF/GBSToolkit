@@ -86,8 +86,8 @@ class Actor(Serializable):
         )
 
     def format(self, names: NameUtil) -> Dict[str, Document]:
-        meta = Document(preserve_property_order=True)
-        meta.extend([
+        meta = Document()
+        meta.nodes.extend([
             prop_node("id", self.id),
             prop_node("name", self.name),
             prop_node("spriteSheet", names.sprite_for_id(serialize(self.sprite_sheet_id))),
@@ -103,31 +103,31 @@ class Actor(Serializable):
             prop_node("__index", self.scene_index)
         ])
         if self.notes is not None:
-            meta.append(prop_node("notes", self.notes))
+            meta.nodes.append(prop_node("notes", self.notes))
         docs = {"meta": meta}
         if len(self.script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, names) for i in self.script])
+            script = Document()
+            script.nodes.extend([Event.format(i, names) for i in self.script])
             docs["interact"] = script
         if len(self.start_script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, names) for i in self.start_script])
+            script = Document()
+            script.nodes.extend([Event.format(i, names) for i in self.start_script])
             docs["init"] = script
         if len(self.update_script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, names) for i in self.update_script])
+            script = Document()
+            script.nodes.extend([Event.format(i, names) for i in self.update_script])
             docs["update"] = script
         if len(self.hit1_script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, names) for i in self.hit1_script])
+            script = Document()
+            script.nodes.extend([Event.format(i, names) for i in self.hit1_script])
             docs["hit-1"] = script
         if len(self.hit2_script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, names) for i in self.hit2_script])
+            script = Document()
+            script.nodes.extend([Event.format(i, names) for i in self.hit2_script])
             docs["hit-2"] = script
         if len(self.hit3_script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, names) for i in self.hit3_script])
+            script = Document()
+            script.nodes.extend([Event.format(i, names) for i in self.hit3_script])
             docs["hit-3"] = script
         return docs
 
@@ -135,12 +135,12 @@ class Actor(Serializable):
     def parse(docs: Dict[str, Document], names: NameUtil, progress: ProgressTracker) -> "Actor":
         meta = docs["meta"]
         contents = map_nodes(meta)
-        interact = [Event.parse(i, names, progress) for i in docs["interact"]] if "interact" in docs else []
-        init = [Event.parse(i, names, progress) for i in docs["init"]] if "init" in docs else []
-        update = [Event.parse(i, names, progress) for i in docs["update"]] if "update" in docs else []
-        hit_1 = [Event.parse(i, names, progress) for i in docs["hit-1"]] if "hit-1" in docs else []
-        hit_2 = [Event.parse(i, names, progress) for i in docs["hit-2"]] if "hit-2" in docs else []
-        hit_3 = [Event.parse(i, names, progress) for i in docs["hit-3"]] if "hit-3" in docs else []
+        interact = [Event.parse(i, names, progress) for i in docs["interact"].nodes] if "interact" in docs else []
+        init = [Event.parse(i, names, progress) for i in docs["init"].nodes] if "init" in docs else []
+        update = [Event.parse(i, names, progress) for i in docs["update"].nodes] if "update" in docs else []
+        hit_1 = [Event.parse(i, names, progress) for i in docs["hit-1"].nodes] if "hit-1" in docs else []
+        hit_2 = [Event.parse(i, names, progress) for i in docs["hit-2"].nodes] if "hit-2" in docs else []
+        hit_3 = [Event.parse(i, names, progress) for i in docs["hit-3"].nodes] if "hit-3" in docs else []
         return Actor(
             id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=contents["name"] if "name" in contents else "",

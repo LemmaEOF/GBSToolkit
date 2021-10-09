@@ -71,7 +71,7 @@ def format_project(project_file: str, project_root: str, progress: ProgressTrack
 
 def parse_project(project_file: str, project_root: str, progress: ProgressTracker):
     progress.set_status("Parsing project metadata and assets")
-    docs = {i.name[:-4]: parse(open(project_root + "/" + i.name)) for i in os.scandir(project_root)
+    docs = {i.name[:-4]: parse(open(project_root + "/" + i.name).read()) for i in os.scandir(project_root)
             if i.is_file() and i.name.endswith(".kdl")}
     project = Project.parse(docs, project_root, progress)
     progress.set_status("Exporting into JSON")
@@ -102,7 +102,7 @@ class Application(Frame):
         self.proj_dir_browse = ttk.Button(self, text="Browse...", command=self.browse_dir)
         self.format_btn = ttk.Button(self, text="Convert .gbsproj to .kdl tree", command=self.execute_format)
         self.parse_btn = ttk.Button(self, text="Convert .kdl tree to .gbsproj", command=self.execute_parse)
-        self.status_label = ttk.Label(self, textvar=self.status)
+        self.status_label = ttk.Label(self, textvar=self.status, justify=CENTER)
         self.error_label = ttk.Label(self, textvar=self.errors, foreground="red", justify=CENTER)
         self.proj_file_label.grid(row=0, column=0)
         self.proj_file_field.grid(row=0, column=1)
@@ -112,7 +112,7 @@ class Application(Frame):
         self.proj_dir_browse.grid(row=1, column=2)
         self.format_btn.grid(row=2, column=0)
         self.parse_btn.grid(row=2, column=2)
-        self.status_label.grid(row=3, column=1)
+        self.status_label.grid(row=3, column=0, columnspan=3)
         self.error_label.grid(row=4, column=0, columnspan=3)
 
     def browse_file(self):
@@ -159,7 +159,7 @@ class Application(Frame):
             can_run = False
             errors.append("Could not find directory '" + dir + "'")
         if can_run:
-            self.master.after(50, self.update_status())
+            self.master.after(16, self.update_status())
             exec_thread = Thread(
                 target=parse_project,
                 args=(file, dir, QueueProgressTracker(self.status_queue, self.errors_queue))
@@ -178,7 +178,7 @@ class Application(Frame):
                 self.errors.set(self.errors_queue.get())
             else:
                 self.errors.set(current + "\n" + self.errors_queue.get())
-        self.master.after(50, self.update_status)
+        self.master.after(16, self.update_status)
 
 
 # TODO: put in the proper place once bundling! I don't actually know where this should go!

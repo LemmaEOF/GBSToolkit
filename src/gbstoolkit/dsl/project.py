@@ -220,31 +220,31 @@ class Project(Serializable):
             names.add_song(str(song.id), song.name)
         for sprite in self.sprite_sheets:
             names.add_sprite(str(sprite.id), sprite.name)
-        meta = Document(preserve_property_order=True)
-        meta.extend([
+        meta = Document()
+        meta.nodes.extend([
             prop_node("name", self.name),
             prop_node("author", self.author),
             prop_node("version", self.version),
             prop_node("release", self.release)
         ])
-        meta.append(self.settings.format(names))
+        meta.nodes.append(self.settings.format(names))
         if self.notes is not None:
-            meta.append(prop_node("notes", self.notes))
+            meta.nodes.append(prop_node("notes", self.notes))
         docs = {"project": meta}
-        backgrounds = Document(preserve_property_order=True)
-        backgrounds.extend([i.format() for i in self.backgrounds])
+        backgrounds = Document()
+        backgrounds.nodes.extend([i.format() for i in self.backgrounds])
         docs["backgrounds"] = backgrounds
-        sprite_sheets = Document(preserve_property_order=True)
-        sprite_sheets.extend([i.format() for i in self.sprite_sheets])
+        sprite_sheets = Document()
+        sprite_sheets.nodes.extend([i.format() for i in self.sprite_sheets])
         docs["sprite-sheets"] = sprite_sheets
-        music = Document(preserve_property_order=True)
-        music.extend([i.format() for i in self.music])
+        music = Document()
+        music.nodes.extend([i.format() for i in self.music])
         docs["music"] = music
-        variables = Document(preserve_property_order=True)
-        variables.extend([Node("$" + k + "$", None, [v], None) for k, v in self.variables.items()])
+        variables = Document()
+        variables.nodes.extend([Node(name="$" + k + "$", args=[v]) for k, v in self.variables.items()])
         docs["variables"] = variables
-        palettes = Document(preserve_property_order=True)
-        palettes.extend([i.format(names) for i in self.palettes])
+        palettes = Document()
+        palettes.nodes.extend([i.format(names) for i in self.palettes])
         docs["palettes"] = palettes
         # TODO: v3 fancy sprite sheets in separate folder!
         return docs, names
@@ -252,11 +252,11 @@ class Project(Serializable):
     @staticmethod
     def parse(docs: Dict[str, Document], project_root: str, progress: ProgressTracker) -> "Project":
         meta = map_nodes(docs["project"])
-        backgrounds = [Background.parse(i) for i in docs["backgrounds"]]
-        sprite_sheets = [SpriteSheet.parse(i) for i in docs["sprite-sheets"]]
-        music = [Song.parse(i) for i in docs["music"]]
-        variables = {i.name[1:-1]: i.arguments[0] for i in docs["variables"]}
-        palettes = [Palette.parse(i) for i in docs["palettes"]]
+        backgrounds = [Background.parse(i) for i in docs["backgrounds"].nodes]
+        sprite_sheets = [SpriteSheet.parse(i) for i in docs["sprite-sheets"].nodes]
+        music = [Song.parse(i) for i in docs["music"].nodes]
+        variables = {i.name[1:-1]: i.args[0] for i in docs["variables"].nodes}
+        palettes = [Palette.parse(i) for i in docs["palettes"].nodes]
         names = ProjectNameUtil()
         for background in backgrounds:
             names.add_background(str(background.id), background.name)
@@ -274,7 +274,7 @@ class Project(Serializable):
         for i in scene_dirs:
             progress.set_status("Parsing meta for scene '" + i + "'")
             with open(project_root + "/scenes/" + i + "/meta.kdl") as scene_meta:
-                doc = parse(scene_meta)
+                doc = parse(scene_meta.read())
                 contents = map_nodes(doc)
                 if "id" in contents:
                     names.add_scene(contents["id"], i, progress)
@@ -284,12 +284,12 @@ class Project(Serializable):
         for i in event_files:
             progress.set_status("Parsing custom event '" + i + "'")
             with open(project_root + "/custom-events/" + i) as event:
-                doc = parse(event)
+                doc = parse(event.read())
                 event_docs.append(doc)
                 contents = map_nodes(doc)
                 names.add_custom_event(contents["id"], sanitize_name(contents["name"], "custom event"), progress)
         # NameUtil should be safe! We can parse stuff using them now~
-        settings = Settings.parse([i for i in docs["project"] if i.name == "settings"][0].children, names)
+        settings = Settings.parse([i for i in docs["project"].nodes if i.name == "settings"][0].nodes, names)
         custom_events: List[Optional[CustomEvent]] = [None for _ in range(len(event_docs))]
         for i in event_docs:
             event = CustomEvent.parse(i, names, progress)
@@ -300,7 +300,7 @@ class Project(Serializable):
         for i in scene_dirs:
             progress.set_status("Parsing contents for scene '" + i + "'")
             scene_dir = project_root + "/scenes/" + i
-            scene_docs = {i.name[:-4]: parse(open(scene_dir + "/" + i.name)) for i in os.scandir(scene_dir)
+            scene_docs = {i.name[:-4]: parse(open(scene_dir + "/" + i.name).read()) for i in os.scandir(scene_dir)
                           if i.is_file() and i.name.endswith(".kdl")}
             scene = Scene.parse(scene_docs, names, scene_dir, progress)
             scenes[scene.proj_index] = scene

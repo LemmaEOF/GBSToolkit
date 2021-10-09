@@ -54,8 +54,8 @@ class Trigger(Serializable):
         )
 
     def format(self, names: NameUtil) -> Dict[str, Document]:
-        meta = Document(preserve_property_order=True)
-        meta.extend([
+        meta = Document()
+        meta.nodes.extend([
             prop_node("id", serialize(self.id)),
             prop_node("name", self.name),
             prop_node("x", self.x),
@@ -66,11 +66,11 @@ class Trigger(Serializable):
             prop_node("__index", self.scene_index)
         ])
         if self.notes is not None:
-            meta.append(self.notes)
+            meta.nodes.append(prop_node("notes", self.notes))
         docs = {"meta": meta}
         if len(self.script) > 0:
-            script = Document(preserve_property_order=True)
-            script.extend([Event.format(i, names) for i in self.script])
+            script = Document()
+            script.nodes.extend([Event.format(i, names) for i in self.script])
             docs["interact"] = script
         return docs
 
@@ -78,7 +78,7 @@ class Trigger(Serializable):
     def parse(docs: Dict[str, Document], names: NameUtil, progress: ProgressTracker) -> "Trigger":
         meta = docs["meta"]
         contents = map_nodes(meta)
-        script = [Event.parse(i, names, progress) for i in docs["interact"]] if "interact" in docs else []
+        script = [Event.parse(i, names, progress) for i in docs["interact"].nodes] if "interact" in docs else []
         return Trigger(
             id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=contents["name"] if "name" in contents else "",

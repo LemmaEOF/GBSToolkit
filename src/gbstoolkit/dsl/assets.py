@@ -48,7 +48,7 @@ class Background(Serializable):
         )
 
     def format(self) -> Node:
-        children = [
+        nodes = [
             prop_node("id", serialize(self.id)),
             prop_node("width", self.width),
             prop_node("height", self.height),
@@ -57,11 +57,11 @@ class Background(Serializable):
             prop_node("filename", self.filename),
             prop_node("timesamp", self.timestamp.timestamp() * 1000)
         ]
-        return Node(self.name, None, None, children)
+        return Node(name=self.name, nodes=nodes)
 
     @staticmethod
     def parse(node: Node) -> "Background":
-        contents = map_nodes(node.children)
+        contents = map_nodes(node.nodes)
         return Background(
             id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=node.name,
@@ -106,18 +106,18 @@ class SpriteSheet(Serializable):  # TODO: gonna break entirely in v3! be ready!
         )
 
     def format(self) -> Node:
-        children = [
+        nodes = [
             prop_node("id", serialize(self.id)),
             prop_node("numFrames", self.num_frames),
             prop_node("type", self.type.serialize()),
             prop_node("filename", self.filename),
             prop_node("timesamp", self.timestamp.timestamp() * 1000)
         ]
-        return Node(self.name, None, None, children)
+        return Node(name=self.name, nodes=nodes)
 
     @staticmethod
     def parse(node: Node) -> "SpriteSheet":
-        contents = map_nodes(node.children)
+        contents = map_nodes(node.nodes)
         return SpriteSheet(
             id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=node.name,
@@ -157,17 +157,17 @@ class Song(Serializable):
         )
 
     def format(self) -> Node:
-        children = [
+        nodes = [
             prop_node("id", serialize(self.id)),
             prop_node("filename", self.filename),
             # prop_node("settings", ) TODO: can't do this bc I don't know what settings is
             prop_node("timesamp", self.timestamp.timestamp() * 1000)
         ]
-        return Node(self.name, None, None, children)
+        return Node(name=self.name, nodes=nodes)
 
     @staticmethod
     def parse(node: Node) -> "Song":
-        contents = map_nodes(node.children)
+        contents = map_nodes(node.nodes)
         return Song(
             id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
             name=node.name,

@@ -54,17 +54,17 @@ class Palette(Serializable):
             )
 
     def format(self, names: NameUtil) -> Node:
-        children = [prop_node("id", serialize(self.id)), prop_node("name", self.name), Node("colors", None, None, [
+        nodes = [prop_node("id", serialize(self.id)), prop_node("name", self.name), Node(name="colors", nodes=[
             prop_node("white", self.colors[0]),
             prop_node("light", self.colors[1]),
             prop_node("dark", self.colors[2]),
             prop_node("black", self.colors[3])
         ])]
-        return Node(names.palette_for_id(str(self.id)), None, None, children)
+        return Node(name=names.palette_for_id(str(self.id)), nodes=nodes)
 
     @staticmethod
     def parse(node: Node) -> "Palette":
-        children = map_nodes(node.children)
+        children = map_nodes(node.nodes)
         name = children["name"]
         id = Palette.parse_id(children["id"])
         colors = [v for k, v in children["colors"].items()]
@@ -88,15 +88,15 @@ class DefaultPalette(Palette):
         return ret
 
     def format(self, names: NameUtil) -> Node:
-        children = [prop_node("id", serialize(self.id)), prop_node("name", self.name), Node("colors", None, None, [
+        nodes = [prop_node("id", serialize(self.id)), prop_node("name", self.name), Node(name="colors", nodes=[
             prop_node("white", self.colors[0]),
             prop_node("light", self.colors[1]),
             prop_node("dark", self.colors[2]),
             prop_node("black", self.colors[3])
-        ]), prop_node("defaultName", self.default_name), Node("defaultColors", None, None, [
+        ]), prop_node("defaultName", self.default_name), Node(name="defaultColors", nodes=[
             prop_node("white", self.default_colors[0]),
             prop_node("light", self.default_colors[1]),
             prop_node("dark", self.default_colors[2]),
             prop_node("black", self.default_colors[3])
         ])]
-        return Node(names.palette_for_id(self.id), None, None, children)
+        return Node(names.palette_for_id(self.id), nodes=nodes)
