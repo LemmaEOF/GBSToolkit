@@ -291,7 +291,7 @@ class Scene(Serializable):
             actor_dirs = [i.name for i in os.scandir(scene_dir + "/actors") if i.is_dir()]
             for i in actor_dirs:
                 progress.set_status("Parsing meta for scene " + scene_dir.split("/")[-1] + " actor '" + i + "'")
-                with open(scene_dir + "/actors/" + i + "/meta.kdl") as meta:
+                with open(scene_dir + "/actors/" + i + "/meta.kdl", encoding="utf-8") as meta:
                     contents = map_nodes(parse(meta.read()))
                     scene_names.add_actor(contents["id"], i, progress)
         else:
@@ -300,7 +300,7 @@ class Scene(Serializable):
             trigger_dirs = [i.name for i in os.scandir(scene_dir + "/triggers") if i.is_dir()]
             for i in trigger_dirs:
                 progress.set_status("Parsing meta for scene " + scene_dir.split("/")[-1] + " trigger '" + i + "'")
-                with open(scene_dir + "/triggers/" + i + "/meta.kdl") as meta:
+                with open(scene_dir + "/triggers/" + i + "/meta.kdl", encoding="utf-8") as meta:
                     contents = map_nodes(parse(meta.read()))
                     scene_names.add_trigger(contents["id"], i, progress)
         else:
@@ -376,7 +376,7 @@ class Scene(Serializable):
         for dir in actor_dirs:
             progress.set_status("Parsing scripts for scene " + scene_dir.split("/")[-1] + " actor '" + dir + "'")
             actor_dir = scene_dir + "/actors/" + dir
-            docs = {i.name[:-4]: parse(open(actor_dir + "/" + i.name).read()) for i in os.scandir(actor_dir)
+            docs = {i.name[:-4]: parse(open(actor_dir + "/" + i.name, encoding="utf-8").read()) for i in os.scandir(actor_dir)
                     if i.is_file() and i.name.endswith(".kdl")}
             actor = Actor.parse(docs, scene_names, progress)
             actors[actor.scene_index] = actor
@@ -384,7 +384,7 @@ class Scene(Serializable):
         for dir in trigger_dirs:
             progress.set_status("Parsing scripts for scene " + scene_dir.split("/")[-1] + " trigger '" + dir + "'")
             trigger_dir = scene_dir + "/triggers/" + dir
-            docs = {i.name[:-4]: parse(open(trigger_dir + "/" + i.name).read()) for i in os.scandir(trigger_dir)
+            docs = {i.name[:-4]: parse(open(trigger_dir + "/" + i.name, encoding="utf-8").read()) for i in os.scandir(trigger_dir)
                     if i.is_file() and i.name.endswith(".kdl")}
             trigger = Trigger.parse(docs, scene_names, progress)
             triggers[trigger.scene_index] = trigger

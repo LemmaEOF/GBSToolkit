@@ -170,6 +170,7 @@ class FormatError(Exception):
     """Exception raised when parsing .gbsproj JSON into KDL."""
 
     def __init__(self, context: str, element: Union[Serializable, JsonSafe], message: str):
+        super().__init__()
         self.context = context
         self.element = element
         self.message = message
@@ -179,6 +180,7 @@ class ParseError(Exception):
     """Exception raised when parsing KDL into .gbsproj JSON."""
 
     def __init__(self, context: str, node: Node, message: str):
+        super().__init__()
         self.context = context
         self.node = node
         self.message = message

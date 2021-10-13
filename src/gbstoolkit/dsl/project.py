@@ -273,7 +273,7 @@ class Project(Serializable):
         scene_dirs = [i.name for i in os.scandir(project_root + "/scenes") if i.is_dir()]
         for i in scene_dirs:
             progress.set_status("Parsing meta for scene '" + i + "'")
-            with open(project_root + "/scenes/" + i + "/meta.kdl") as scene_meta:
+            with open(project_root + "/scenes/" + i + "/meta.kdl", encoding="utf-8") as scene_meta:
                 doc = parse(scene_meta.read())
                 contents = map_nodes(doc)
                 if "id" in contents:
@@ -283,7 +283,7 @@ class Project(Serializable):
         event_docs = []
         for i in event_files:
             progress.set_status("Parsing custom event '" + i + "'")
-            with open(project_root + "/custom-events/" + i) as event:
+            with open(project_root + "/custom-events/" + i, encoding="utf-8") as event:
                 doc = parse(event.read())
                 event_docs.append(doc)
                 contents = map_nodes(doc)
@@ -300,7 +300,7 @@ class Project(Serializable):
         for i in scene_dirs:
             progress.set_status("Parsing contents for scene '" + i + "'")
             scene_dir = project_root + "/scenes/" + i
-            scene_docs = {i.name[:-4]: parse(open(scene_dir + "/" + i.name).read()) for i in os.scandir(scene_dir)
+            scene_docs = {i.name[:-4]: parse(open(scene_dir + "/" + i.name, encoding="utf-8").read()) for i in os.scandir(scene_dir)
                           if i.is_file() and i.name.endswith(".kdl")}
             scene = Scene.parse(scene_docs, names, scene_dir, progress)
             scenes[scene.proj_index] = scene

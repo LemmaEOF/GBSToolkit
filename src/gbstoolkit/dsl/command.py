@@ -66,7 +66,7 @@ class Command(ABC, metaclass=AutoRegister):
         return NotImplemented
 
 
-# TODO: make me use JiK (which requires a kdl-py rewrite)
+# TODO: make me use JiK?
 class Fallback(Command):
     def __init__(self, name: str):
         self.fallback_name = name

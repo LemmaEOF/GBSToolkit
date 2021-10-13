@@ -8,28 +8,28 @@ from tkinter import CENTER, END, filedialog, Frame, StringVar, ttk
 
 from kdl import parse
 
-from dsl.project import Project
-from dsl.util import ProgressTracker, PrintProgressTracker, QueueProgressTracker
+from .dsl.project import Project
+from .dsl.util import ProgressTracker, PrintProgressTracker, QueueProgressTracker
 
 
 def format_project(project_file: str, project_root: str, progress: ProgressTracker):
     if not os.path.exists(project_root):
         os.mkdir(project_root)
-    with open(project_file) as file:
+    with open(project_file, encoding="utf-8") as file:
         progress.set_status("Deserializing " + project_file)
         contents = json.load(file)
         project = Project.deserialize(contents)
         proj_docs, names = project.format(progress)
         for name, doc in proj_docs.items():
             path = project_root + "/" + name + ".kdl"
-            with open(path, mode="w") as out:
+            with open(path, mode="w", encoding="utf-8") as out:
                 out.write(str(doc))
                 progress.set_status("Exported " + path + "!")
         if len(project.custom_events) > 0 and not os.path.exists(project_root + "/custom-events"):
             os.mkdir(project_root + "/custom-events")
         for event in project.custom_events:
             path = project_root + "/custom-events/" + names.custom_event_for_id(str(event.id)) + ".kdl"
-            with open(path, mode="w") as out:
+            with open(path, mode="w", encoding="utf-8") as out:
                 out.write(str(event.format(names)))
                 progress.set_status("Exported " + path + "!")
         if len(project.scenes) > 0 and not os.path.exists(project_root + "/scenes"):
@@ -41,7 +41,7 @@ def format_project(project_file: str, project_root: str, progress: ProgressTrack
                 os.mkdir(scene_path)
             scene_docs, scene_names = scene.format(names, progress)
             for name, doc in scene_docs.items():
-                with open(scene_path + name + ".kdl", mode="w") as out:
+                with open(scene_path + name + ".kdl", mode="w", encoding="utf-8") as out:
                     out.write(str(doc))
                     progress.set_status("Exported " + scene_path + name + ".kdl!")
             if len(scene.actors) > 0 and not os.path.exists(scene_path + "actors"):
@@ -52,7 +52,7 @@ def format_project(project_file: str, project_root: str, progress: ProgressTrack
                     os.mkdir(actor_path)
                 actor_docs = actor.format(scene_names)
                 for name, doc in actor_docs.items():
-                    with open(actor_path + name + ".kdl", mode="w") as out:
+                    with open(actor_path + name + ".kdl", mode="w", encoding="utf-8") as out:
                         out.write(str(doc))
                         progress.set_status("Exported " + actor_path + name + ".kdl!")
             if len(scene.triggers) > 0 and not os.path.exists(scene_path + "triggers"):
@@ -63,7 +63,7 @@ def format_project(project_file: str, project_root: str, progress: ProgressTrack
                     os.mkdir(trigger_path)
                 trigger_docs = trigger.format(scene_names)
                 for name, doc in trigger_docs.items():
-                    with open(trigger_path + name + ".kdl", mode="w") as out:
+                    with open(trigger_path + name + ".kdl", mode="w", encoding="utf-8") as out:
                         out.write(str(doc))
                         progress.set_status("Exported " + trigger_path + name + ".kdl!")
         progress.set_status("Project exported!")
@@ -71,7 +71,7 @@ def format_project(project_file: str, project_root: str, progress: ProgressTrack
 
 def parse_project(project_file: str, project_root: str, progress: ProgressTracker):
     progress.set_status("Parsing project metadata and assets")
-    docs = {i.name[:-4]: parse(open(project_root + "/" + i.name).read()) for i in os.scandir(project_root)
+    docs = {i.name[:-4]: parse(open(project_root + "/" + i.name, encoding="utf-8").read()) for i in os.scandir(project_root)
             if i.is_file() and i.name.endswith(".kdl")}
     project = Project.parse(docs, project_root, progress)
     progress.set_status("Exporting into JSON")
@@ -80,7 +80,7 @@ def parse_project(project_file: str, project_root: str, progress: ProgressTracke
         if os.path.exists(project_file + ".bak"):
             os.remove(project_file + ".bak")
         os.rename(project_file, project_file + ".bak")
-    with open(project_file, "w") as out:
+    with open(project_file, "w", encoding="utf-8") as out:
         json.dump(contents, out, indent=4)
     progress.set_status("Project exported!")
 
