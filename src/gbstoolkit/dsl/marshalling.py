@@ -3,6 +3,7 @@ Additional types to cover for multiple possible values in event arguments, plus 
 """
 
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from typing import Any, Dict, List, Union
 from uuid import UUID
 
@@ -18,8 +19,13 @@ class Serializable(ABC):
 
 
 def serialize(obj: Any) -> JsonSafe:
-    if type(obj) == int or type(obj) == float or type(obj) == bool or type(obj) == str or obj is None:
+    if type(obj) == int or type(obj) == bool or type(obj) == str or obj is None:
         # Already safe! Go on ahead!
+        return obj
+    if type(obj) == float:
+        # Check if we can truncate floats!
+        if obj.is_integer:
+            return int(obj)
         return obj
     if type(obj) == UUID:
         # A UUID! We special-case these because they're damn well everywhere in GB Studio
@@ -36,6 +42,8 @@ def serialize(obj: Any) -> JsonSafe:
     elif isinstance(obj, SerializableEnum):
         # We know it's serializable as an enum! Serialize it!
         return obj.serialize()
+    elif isinstance(obj, OrderedDict):
+        return {str(k): serialize(v) for k, v in obj.items()}
     else:
         # We don't know how to serialize this! Give up because we don't really care about full capabilities!
         raise ValueError("Attempted to serialize un-serializable type " + str(type(obj)))

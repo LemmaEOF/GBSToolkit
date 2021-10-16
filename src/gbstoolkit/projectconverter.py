@@ -159,7 +159,7 @@ class Application(Frame):
             can_run = False
             errors.append("Could not find directory '" + dir + "'")
         if can_run:
-            self.master.after(16, self.update_status())
+            self.master.after(50, self.update_status())
             exec_thread = Thread(
                 target=parse_project,
                 args=(file, dir, QueueProgressTracker(self.status_queue, self.errors_queue))
@@ -170,15 +170,15 @@ class Application(Frame):
             self.errors.set("\n".join(errors))
 
     def update_status(self):
-        if not self.status_queue.empty():
+        while not self.status_queue.empty():
             self.status.set(self.status_queue.get())
-        if not self.errors_queue.empty():
+        while not self.errors_queue.empty():
             current = self.errors.get()
             if current == "":
                 self.errors.set(self.errors_queue.get())
             else:
                 self.errors.set(current + "\n" + self.errors_queue.get())
-        self.master.after(16, self.update_status)
+        self.master.after(50, self.update_status)
 
 
 # TODO: put in the proper place once bundling! I don't actually know where this should go!

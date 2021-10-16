@@ -118,23 +118,25 @@ class Fallback(Command):
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         ret = {}
-        if data.children is not None:
+        if len(data.children) > 0:
             for node in data.children:
-                if node.nodes is not None:
-                    if node.props is not None and "__type" in node.props and node.props["__type"] == "list":
+                if len(node.nodes) > 0:
+                    if "__type" in node.props and node.props["__type"] == "list":
                         ret[node.name] = Fallback.parse_list(node.nodes, names)
                     else:
                         ret[node.name] = Fallback.parse(NodeData(OrderedDict(), [], node.nodes), names)
-                else:
+                elif len(node.args) > 0:
                     ret[node.name] = node.args[0]
-        return ret
+        if "__eventid" in ret:
+            del ret["__eventid"]
+        return ret if len(ret) > 0 else None
 
     @staticmethod
     def parse_list(children: List[Node], names: NameUtil) -> List[JsonSafe]:
         ret = []
         for node in children:
-            if node.nodes is not None:
-                if node.props is not None and "__type" in node.props and node.props["__type"] == "list":
+            if len(node.nodes) > 0:
+                if "__type" in node.props and node.props["__type"] == "list":
                     ret.append(Fallback.parse_list(node.nodes, names))
                 else:
                     ret.append(Fallback.parse(NodeData(OrderedDict(), [], node.nodes), names))
@@ -661,15 +663,13 @@ class CallCustomEventCommand(Command):
 
     @staticmethod
     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        props = OrderedDict()
         if len(args) > 2:
-            props = OrderedDict({})
             for k, v in args.items():
                 if "variable" in k:
                     props["var" + k[10:-2]] = "$" + v + "$"
                 elif "actor" in k:
                     props["actor" + k[7:-2]] = names.actor_for_id(v)
-        else:
-            props = None
         return NodeData(props, [names.custom_event_for_id(args["customEventId"])])
 
     @staticmethod
@@ -1073,7 +1073,7 @@ class IfActorRelativeTo(Command):
         ret = {
             "actorId": names.id_for_actor(data.args[0]),
             "operation": RelativeActorPosition.parse(data.args[1]),
-            "otherActorId": names.id_for_actor(data.args[1])
+            "otherActorId": names.id_for_actor(data.args[2])
         }
         if "__disableElse" in data.props:
             ret["__disableElse"] = data.props["__disableElse"]
@@ -1744,9 +1744,9 @@ class TextDialogueCommand(Command):
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        if data.children is not None:
+        if len(data.children) > 0:
             text = [parse_dialogue(i.args[0]) for i in data.children]
-            avatar_id = data.args[0] if data.args is not None else None
+            avatar_id = data.args[0] if len(data.args) > 0 else None
         else:
             text = parse_dialogue(data.args[-1])
             avatar_id = data.args[0] if len(data.args) > 1 else None

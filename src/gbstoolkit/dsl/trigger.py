@@ -77,7 +77,7 @@ class Trigger(Serializable):
     @staticmethod
     def parse(docs: Dict[str, Document], names: NameUtil, progress: ProgressTracker) -> "Trigger":
         meta = docs["meta"]
-        contents = map_nodes(meta)
+        contents = map_nodes(meta.nodes)
         script = [Event.parse(i, names, progress) for i in docs["interact"].nodes] if "interact" in docs else []
         return Trigger(
             id=UUID(contents["id"]) if "id" in contents else uuid.uuid4(),
@@ -89,5 +89,5 @@ class Trigger(Serializable):
             # trigger=contents["trigger"],
             notes=contents["notes"] if "notes" in contents else None,
             script=script,
-            scene_index=contents["__index"]
+            scene_index=int(contents["__index"])
         )

@@ -42,50 +42,46 @@ class Event(Serializable):
 
     def format(self, names: NameUtil) -> Node:
         data = self.command.format(self.args, names)
-        node_children = data.children
+        node_children = data.children if data.children is not None else []
         if self.children is not None and self.command.name != "EVENT_CALL_CUSTOM_EVENT":
-            if data.children is not None:
+            if data.children is not None and len(data.children) > 0:
                 if isinstance(self.command, Fallback):
                     fallback_children = []
                     for k, v in self.children.items():
                         children_list = [i.format(names) for i in v]
                         fallback_children.append(Node(name=k, nodes=children_list))
-                    node_children.append(Node("children", nodes=fallback_children))
+                    node_children.append(Node("__children", nodes=fallback_children))
                 else:
                     raise FormatError("event", self, "")
-            node_children = []
-            for k, v in self.children.items():
-                children_list = [i.format(names) for i in v]
-                node_children.append(Node(name=k, nodes=children_list))
-        props = data.props if data.props is not None else OrderedDict()
+            else:
+                for k, v in self.children.items():
+                    children_list = [i.format(names) for i in v]
+                    node_children.append(Node(name=k, nodes=children_list))
+        props = data.props
         props["__eventid"] = str(self.id)
         if isinstance(self.command, Fallback):
             keyword = self.command.fallback_keyword
-
         else:
             keyword = self.command.keyword()
-        return Node(name=keyword, props=props, args=data.args if data.args is not None else [], nodes=node_children)
+        return Node(name=keyword, props=props, args=data.args, nodes=node_children)
 
     @staticmethod
     def parse(node: Node, names: NameUtil, progress: ProgressTracker) -> "Event":
         command = KEYWORDS[node.name] if node.name in KEYWORDS else Fallback(keyword_to_command(node.name))
         children = None
-        if node.nodes is not None and command.children_names() is not None:
+        if len(node.nodes) > 0 and command.children_names() is not None:
             children = {}
             for child in node.nodes:
                 children[child.name] = [Event.parse(i, names, progress) for i in child.nodes]
         elif isinstance(command, Fallback):
-            children_nodes = [i for i in node.nodes if i.name == "children"]
+            children_nodes = [i for i in node.nodes if i.name == "__children"]
             if len(children_nodes) > 0:
                 children = {}
                 children_node = children_nodes[-1]
                 for child in children_node.nodes:
                     children[child.name] = [Event.parse(i, names, progress) for i in child.nodes]
                 node.nodes.remove(children_node)
-        if node.props is not None:
-            id = UUID(node.props["__eventid"]) if "__eventid" in node.props else uuid.uuid4()
-        else:
-            id = uuid.uuid4()
+        id = UUID(node.props["__eventid"]) if "__eventid" in node.props else uuid.uuid4()
         if isinstance(command, Fallback):
             progress.flag_missing_command(command.fallback_keyword)
         args = command.parse(NodeData(node.props, node.args, node.nodes), names)
@@ -154,14 +150,14 @@ class CustomEvent(Serializable):
         if len(self.actors) > 0:
             doc.nodes.append(Node(
                 name="actors",
-                nodes=[Node(name="$" + str(k) + "$", args=[v]) for k, v in self.variables.items()]
+                nodes=[Node(name="$" + str(k) + "$", args=[v]) for k, v in self.actors.items()]
             ))
         doc.nodes.append(Node(name="script", nodes=[i.format(names) for i in self.script]))
         return doc
 
     @staticmethod
     def parse(doc: Document, names: NameUtil, progress: ProgressTracker) -> "CustomEvent":
-        contents = map_nodes(doc)
+        contents = map_nodes(doc.nodes)
         id = UUID(contents["id"]) if "id" in contents else uuid.uuid4()
         name = contents["name"]
         description = contents["description"]
@@ -169,5 +165,5 @@ class CustomEvent(Serializable):
         actors = {int(k[1:-1]): v for k, v in contents["actors"].items()} if "actors" in contents else {}
         script_node = [i for i in doc.nodes if i.name == "script"][0]
         script = [Event.parse(i, names, progress) for i in script_node.nodes]
-        proj_index = contents["__index"]
+        proj_index = int(contents["__index"])
         return CustomEvent(id, name, description, variables, actors, script, proj_index)

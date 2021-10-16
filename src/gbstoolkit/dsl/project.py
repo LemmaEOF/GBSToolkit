@@ -85,11 +85,13 @@ class ProjectNameUtil(NameUtil):
     def actor_for_id(self, id: str) -> str:
         if id == "player" or id == "$self$" or id.isdecimal():
             return id
+        # TODO: raise here if illegal name found
         return NotImplemented
 
     def id_for_actor(self, name: str) -> str:
         if name == "player" or name == "$self$" or name.isdecimal():
             return name
+        # TODO: raise here if illegal name found
         return NotImplemented
 
     def background_for_id(self, id: str) -> str:
@@ -251,7 +253,7 @@ class Project(Serializable):
 
     @staticmethod
     def parse(docs: Dict[str, Document], project_root: str, progress: ProgressTracker) -> "Project":
-        meta = map_nodes(docs["project"])
+        meta = map_nodes(docs["project"].nodes)
         backgrounds = [Background.parse(i) for i in docs["backgrounds"].nodes]
         sprite_sheets = [SpriteSheet.parse(i) for i in docs["sprite-sheets"].nodes]
         music = [Song.parse(i) for i in docs["music"].nodes]
@@ -275,7 +277,7 @@ class Project(Serializable):
             progress.set_status("Parsing meta for scene '" + i + "'")
             with open(project_root + "/scenes/" + i + "/meta.kdl", encoding="utf-8") as scene_meta:
                 doc = parse(scene_meta.read())
-                contents = map_nodes(doc)
+                contents = map_nodes(doc.nodes)
                 if "id" in contents:
                     names.add_scene(contents["id"], i, progress)
         # More chicken-egg hell: have to do a light first pass of custom events to get the IDs into NameUtil too! aaa
@@ -286,7 +288,7 @@ class Project(Serializable):
             with open(project_root + "/custom-events/" + i, encoding="utf-8") as event:
                 doc = parse(event.read())
                 event_docs.append(doc)
-                contents = map_nodes(doc)
+                contents = map_nodes(doc.nodes)
                 names.add_custom_event(contents["id"], sanitize_name(contents["name"], "custom event"), progress)
         # NameUtil should be safe! We can parse stuff using them now~
         settings = Settings.parse([i for i in docs["project"].nodes if i.name == "settings"][0].nodes, names)

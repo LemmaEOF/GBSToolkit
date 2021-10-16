@@ -104,8 +104,8 @@ class UnionArgument(Serializable, Generic[T]):
 
     @staticmethod
     def parse(obj: Union[str, int], names: NameUtil) -> Dict[str, JsonSafe]:
-        if type(obj) == int:
-            return {"type": "number", "value": obj}
+        if type(obj) == int or type(obj) == float:
+            return {"type": "number", "value": int(obj)}
         else:
             if obj[0] == "$" and obj[-1] == "$":
                 return {"type": "variable", "value": obj[1:-1]}

@@ -261,9 +261,9 @@ class Scene(Serializable):
                     color = self.tile_colors[index]
                     if color > 0:
                         tile_colors.nodes.append(Node(name="palette" + str(color), args=[x, y]))
-        if len(collisions.nodes) > 0:
+        if hasCollisions:
             docs["collisions"] = collisions
-        if len(tile_colors.nodes) > 0:
+        if hasTileColors:
             docs["tile-colors"] = tile_colors
         if len(self.script) > 0:
             script = Document()
@@ -292,29 +292,29 @@ class Scene(Serializable):
             for i in actor_dirs:
                 progress.set_status("Parsing meta for scene " + scene_dir.split("/")[-1] + " actor '" + i + "'")
                 with open(scene_dir + "/actors/" + i + "/meta.kdl", encoding="utf-8") as meta:
-                    contents = map_nodes(parse(meta.read()))
+                    contents = map_nodes(parse(meta.read()).nodes)
                     scene_names.add_actor(contents["id"], i, progress)
         else:
             actor_dirs = []
-        if os.path.exists(scene_dir + "/trigges"):
+        if os.path.exists(scene_dir + "/triggers"):
             trigger_dirs = [i.name for i in os.scandir(scene_dir + "/triggers") if i.is_dir()]
             for i in trigger_dirs:
                 progress.set_status("Parsing meta for scene " + scene_dir.split("/")[-1] + " trigger '" + i + "'")
                 with open(scene_dir + "/triggers/" + i + "/meta.kdl", encoding="utf-8") as meta:
-                    contents = map_nodes(parse(meta.read()))
+                    contents = map_nodes(parse(meta.read()).nodes)
                     scene_names.add_trigger(contents["id"], i, progress)
         else:
             trigger_dirs = []
-        contents = map_nodes(docs["meta"])
+        contents = map_nodes(docs["meta"].nodes)
         id = UUID(contents["id"]) if "id" in contents else uuid.uuid4()
         name = contents["name"]
         type = SceneType.deserialize(contents["type"])
         background_id = UUID(scene_names.id_for_background(contents["background"]))
         x = contents["x"]
         y = contents["y"]
-        width = contents["width"]
-        height = contents["height"]
-        proj_index = contents["__index"]
+        width = int(contents["width"])
+        height = int(contents["height"])
+        proj_index = int(contents["__index"])
         if "palettes" in contents:
             palettes = contents["palettes"]
             palette_ids: List[Optional[str]] = [None for _ in range(6)]
@@ -330,7 +330,7 @@ class Scene(Serializable):
             for node in doc.nodes:
                 node_x = node.args[0]
                 node_y = node.args[1]
-                index = (width * node_y) + node_x
+                index = int((width * node_y) + node_x)
                 if node.name == "all":
                     collisions[index] |= 0xF
                 elif node.name == "up":
@@ -351,7 +351,7 @@ class Scene(Serializable):
             for node in doc.nodes:
                 node_x = node.args[0]
                 node_y = node.args[1]
-                index = (width * node_y) + node_x
+                index = int((width * node_y) + node_x)
                 tile_colors[index] = int(node.name[-1])
         else:
             tile_colors = []

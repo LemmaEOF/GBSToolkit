@@ -190,8 +190,8 @@ def sanitize_name(name: str, context: str) -> str:
     illegal_filenames = ["CON", "PRN", "AUX", "CLOCK$", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6",
                          "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
                          "LPT9"]
-    ret = re.sub(r'[/\\*:?\";|,\[\]&<>=]', '-', name)
-    if platform.system() == "Windows" and ret in illegal_filenames:
+    ret = re.sub(r'[/\\*:?\";|,\[\]&<>=\+]', '-', name)
+    if platform.system() == "Windows" and ret.upper() in illegal_filenames:
         print("WARNING! " + context + " name '" + ret + "' is reserved on Windows. Renaming to '" + ret + "-" + "'!")
         print("For more information, see this video: https://youtu.be/bC6tngl0PTI")
         ret += "-"
@@ -211,12 +211,17 @@ def prop_node(name: str, value: Any) -> Node:
     return Node(name, args=[serialize(value)])
 
 
-def map_nodes(doc: Union[Document, List[Node]]) -> Dict[str, JsonSafe]:
-    if isinstance(doc, Document):
-        doc = doc.nodes
-    return {i.name: i.args[0] if i.args is not None and len(i.args) > 0 else map_nodes(i.args)
-            for i in doc
-            if (i.args is not None and len(i.args) > 0) or (i.nodes is not None and len(i.nodes) > 0)}
+def map_nodes(doc: List[Node]) -> Dict[str, JsonSafe]:
+    ret = {}
+    for i in doc:
+        if len(i.args) > 0:
+            ret[i.name] = i.args[0]
+        elif len(i.nodes) > 0:
+            ret[i.name] = map_nodes(i.nodes)
+    return ret
+    # return {i.name: i.args[0] if len(i.args) > 0 else map_nodes(i.args)
+    #         for i in doc
+    #         if (len(i.args) > 0) or (len(i.nodes) > 0)}
 
 
 def command_to_keyword(name: str) -> str:

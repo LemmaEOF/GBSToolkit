@@ -134,7 +134,7 @@ class Actor(Serializable):
     @staticmethod
     def parse(docs: Dict[str, Document], names: NameUtil, progress: ProgressTracker) -> "Actor":
         meta = docs["meta"]
-        contents = map_nodes(meta)
+        contents = map_nodes(meta.nodes)
         interact = [Event.parse(i, names, progress) for i in docs["interact"].nodes] if "interact" in docs else []
         init = [Event.parse(i, names, progress) for i in docs["init"].nodes] if "init" in docs else []
         update = [Event.parse(i, names, progress) for i in docs["update"].nodes] if "update" in docs else []
@@ -162,5 +162,5 @@ class Actor(Serializable):
             hit1_script=hit_1,
             hit2_script=hit_2,
             hit3_script=hit_3,
-            scene_index=contents["__index"]
+            scene_index=int(contents["__index"])
         )
