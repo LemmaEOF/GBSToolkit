@@ -5,8 +5,8 @@ from uuid import UUID
 from kdl import Node
 
 from .cmd_base import Command
-from gbstoolkit.dsl.marshalling import JsonSafe, serialize
-from gbstoolkit.dsl.util import NameUtil, NodeData, format_dialogue, parse_dialogue
+from ..marshalling import JsonSafe, serialize
+from ..util import NameUtil, NodeData, format_dialogue, parse_dialogue
 
 class MenuCommand(Command):
     @staticmethod
@@ -72,9 +72,9 @@ class TextDialogueCommand(Command):
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        if data.children is not None:
+        if len(data.children) > 0:
             text = [parse_dialogue(i.args[0]) for i in data.children]
-            avatar_id = data.args[0] if data.args is not None else None
+            avatar_id = data.args[0] if len(data.args) > 0 else None
         else:
             text = parse_dialogue(data.args[-1])
             avatar_id = data.args[0] if len(data.args) > 1 else None

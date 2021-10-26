@@ -3,10 +3,10 @@ from typing import Dict, Optional, Union
 from uuid import UUID
 
 from .cmd_base import Command
-from gbstoolkit.dsl.datatypes import ActorID, UnionArgument
-from gbstoolkit.dsl.enums import Direction, MoveType
-from gbstoolkit.dsl.marshalling import JsonSafe, serialize
-from gbstoolkit.dsl.util import NameUtil, NodeData
+from ..datatypes import ActorID, UnionArgument
+from ..enums import Direction, MoveType
+from ..marshalling import JsonSafe, serialize
+from ..util import NameUtil, NodeData
 
 class ActorCollisionsDisableCommand(Command):
     @staticmethod
@@ -339,11 +339,17 @@ class ActorSetDirectionCommand(Command):
 
     @staticmethod
     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
-        return NodeData(OrderedDict(), [names.actor_for_id(args["actorId"]), UnionArgument.format(args["direction"], names)])
+        return NodeData(OrderedDict(), [
+            names.actor_for_id(args["actorId"]),
+            UnionArgument.format(args["direction"], names)
+        ])
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return {"actorId": names.id_for_actor(data.args[0]), "direction": UnionArgument.parse(data.args[1], names)}
+        return {
+            "actorId": names.id_for_actor(data.args[0]),
+            "direction": UnionArgument.parse(data.args[1], names, ("direction", Direction))
+        }
 
 
 class ActorSetFrameCommand(Command):
@@ -361,7 +367,9 @@ class ActorSetFrameCommand(Command):
 
     @staticmethod
     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
-        return NodeData(OrderedDict(), [names.actor_for_id(args["actorId"]), UnionArgument.format(args["frame"], names)])
+        return NodeData(OrderedDict(), [
+            names.actor_for_id(args["actorId"]), UnionArgument.format(args["frame"], names)
+        ])
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:

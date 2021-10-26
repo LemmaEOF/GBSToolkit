@@ -50,6 +50,26 @@ class MoveType(SerializableEnum):
         return MoveType(obj)
 
 
+class OverlayColor(SerializableEnum):
+    BLACK = ("black", 0)
+    WHITE = ("white", 1)
+
+    def serialize(self) -> int:
+        return self.value[1]
+
+    @staticmethod
+    def deserialize(obj: int) -> "OverlayColor":
+        return OverlayColor.BLACK if obj == 0 else OverlayColor.WHITE
+
+    @staticmethod
+    def format(obj: int) -> str:
+        return "black" if obj == 0 else "white"
+
+    @staticmethod
+    def parse(obj: str) -> int:
+        return 0 if obj == "black" else "white"
+
+
 class RelativeActorPosition(SerializableEnum):
     ABOVE = ("up", "above")
     BELOW = ("down", "below")
@@ -92,7 +112,7 @@ class RelativeActorPosition(SerializableEnum):
 class SceneType(SerializableEnum):  # TODO: swap names in V3!
     TOP_DOWN = "0"  # "TOPDOWN"
     PLATFORMING = "1"  # "PLATFORM"
-    ADVENTURE = "2" # "ADVENTURE"
+    ADVENTURE = "2"  # "ADVENTURE"
     SHOOT_EM_UP = "3"  # "SHMUP"
     POINT_AND_CLICK = "4"  # "POINTNCLICK"
     # LOGO = "LOGO"

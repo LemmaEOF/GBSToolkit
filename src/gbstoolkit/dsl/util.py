@@ -211,17 +211,9 @@ def prop_node(name: str, value: Any) -> Node:
     return Node(name, args=[serialize(value)])
 
 
-def map_nodes(doc: List[Node]) -> Dict[str, JsonSafe]:
-    ret = {}
-    for i in doc:
-        if len(i.args) > 0:
-            ret[i.name] = i.args[0]
-        elif len(i.nodes) > 0:
-            ret[i.name] = map_nodes(i.nodes)
-    return ret
-    # return {i.name: i.args[0] if len(i.args) > 0 else map_nodes(i.args)
-    #         for i in doc
-    #         if (len(i.args) > 0) or (len(i.nodes) > 0)}
+def map_nodes(doc: List[Node], ignore: List[str] = ()) -> Dict[str, JsonSafe]:
+    return {i.name: i.args[0] if len(i.args) > 0 else map_nodes(i.nodes) for i in doc
+            if (len(i.args) > 0 or len(i.nodes) > 0) and i.name not in ignore}
 
 
 def command_to_keyword(name: str) -> str:

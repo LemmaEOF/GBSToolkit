@@ -5,10 +5,10 @@ from uuid import UUID
 from kdl import Node
 
 from .cmd_base import Command
-from gbstoolkit.dsl.datatypes import ActorID
-from gbstoolkit.dsl.enums import Direction, RelativeActorPosition
-from gbstoolkit.dsl.marshalling import JsonSafe, serialize
-from gbstoolkit.dsl.util import NameUtil, NodeData
+from ..datatypes import ActorID
+from ..enums import Direction, RelativeActorPosition
+from ..marshalling import JsonSafe, serialize
+from ..util import NameUtil, NodeData
 
 
 # TODO: single child so make it a direct child (in event.py)

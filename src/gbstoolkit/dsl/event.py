@@ -157,13 +157,13 @@ class CustomEvent(Serializable):
 
     @staticmethod
     def parse(doc: Document, names: NameUtil, progress: ProgressTracker) -> "CustomEvent":
-        contents = map_nodes(doc.nodes)
+        contents = map_nodes(doc.nodes, ["script"])
         id = UUID(contents["id"]) if "id" in contents else uuid.uuid4()
         name = contents["name"]
         description = contents["description"]
         variables = {int(k[1:-1]): v for k, v in contents["variables"].items()} if "variables" in contents else {}
         actors = {int(k[1:-1]): v for k, v in contents["actors"].items()} if "actors" in contents else {}
-        script_node = [i for i in doc.nodes if i.name == "script"][0]
+        script_node = [i for i in doc.nodes if i.name == "script"][-1]
         script = [Event.parse(i, names, progress) for i in script_node.nodes]
         proj_index = int(contents["__index"])
         return CustomEvent(id, name, description, variables, actors, script, proj_index)

@@ -7,7 +7,7 @@ from uuid import UUID
 from kdl import Node
 
 from .datatypes import ActorID, UnionArgument
-from .enums import Direction, MoveType, RelativeActorPosition
+from .enums import Direction, MoveType, OverlayColor, RelativeActorPosition
 from .marshalling import JsonSafe, serialize
 from .util import NameUtil, NodeData, command_to_keyword, format_dialogue, parse_dialogue
 
@@ -414,6 +414,7 @@ class ActorPushCommand(Command):
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        del data.props["__eventid"]
         return data.props
 
 
@@ -1702,7 +1703,7 @@ class OverlayShowCommand(Command):
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
-        return {"color": str, "x": int, "y": int}  # TODO: enum
+        return {"color": OverlayColor, "x": int, "y": int}
 
     @staticmethod
     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:

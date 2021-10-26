@@ -5,10 +5,10 @@ from uuid import UUID
 from kdl import Node
 
 from .cmd_base import Command
-from gbstoolkit.dsl.datatypes import ActorID, UnionArgument
-from gbstoolkit.dsl.enums import Direction, MoveType, RelativeActorPosition
-from gbstoolkit.dsl.marshalling import JsonSafe, serialize
-from gbstoolkit.dsl.util import NameUtil, NodeData
+from ..datatypes import ActorID, UnionArgument
+from ..enums import OverlayColor
+from ..marshalling import JsonSafe, serialize
+from ..util import NameUtil, NodeData
 
 
 class CallCustomEventCommand(Command):
@@ -50,6 +50,7 @@ class CallCustomEventCommand(Command):
                 elif k.startswith("actor"):
                     ret["$actor[" + k[5:] + "]$"] = names.id_for_actor(v)
         return ret
+
 
 class CommentCommand(Command):
     @staticmethod
@@ -137,51 +138,6 @@ class DataSaveCommand(Command):
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         return None
-
-
-# TODO: engine field stuff
-# class EngineFieldSetCommand(Command):
-#     @staticmethod
-#     def name() -> str:
-#         return "EVENT_ENGINE_FIELD_SET"
-#
-#     @staticmethod
-#     def keyword() -> str:
-#         return "setEngineField"
-#
-#     @staticmethod
-#     def required_args() -> Optional[Dict[str, type]]:
-#         pass
-#
-#     @staticmethod
-#     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
-#         pass
-#
-#     @staticmethod
-#     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-#         pass
-#
-#
-# class EngineFieldStoreCommand(Command):
-#     @staticmethod
-#     def name() -> str:
-#         return "EVENT_ENGINE_FIELD_STORE"
-#
-#     @staticmethod
-#     def keyword() -> str:
-#         return "storeEngineField"
-#
-#     @staticmethod
-#     def required_args() -> Optional[Dict[str, type]]:
-#         pass
-#
-#     @staticmethod
-#     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
-#         pass
-#
-#     @staticmethod
-#     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-#         pass
 
 
 # TODO: this is hell we live in hell why does this have six args one of which is a list (impl me later)
@@ -314,7 +270,7 @@ class OverlayShowCommand(Command):
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
-        return {"color": str, "x": int, "y": int}  # TODO: enum
+        return {"color": OverlayColor, "x": int, "y": int}
 
     @staticmethod
     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:

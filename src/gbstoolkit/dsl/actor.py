@@ -37,23 +37,23 @@ class Actor(Serializable):
     def serialize(self) -> JsonSafe:
         ret = {
             "id": serialize(self.id),
-            "name": self.name,
             "spriteSheetId": serialize(self.sprite_sheet_id),
-            "spriteType": serialize(self.sprite_type),
-            "frame": self.frame,
             "x": self.x,
             "y": self.y,
             "movementType": serialize(self.movement_type),
             "direction": serialize(self.direction),
-            "moveSpeed": self.move_speed,
-            "animSpeed": self.anim_speed,
-            "collisionGroup": self.collision_group,
             "script": serialize(self.script),
-            "startScript": serialize(self.start_script),
+            "moveSpeed": self.move_speed,
+            "frame": self.frame,
+            "spriteType": serialize(self.sprite_type),
             "updateScript": serialize(self.update_script),
+            "startScript": serialize(self.start_script),
             "hit1Script": serialize(self.hit1_script),
             "hit2Script": serialize(self.hit2_script),
-            "hit3Script": serialize(self.hit3_script)
+            "hit3Script": serialize(self.hit3_script),
+            "name": self.name,
+            "animSpeed": self.anim_speed,
+            "collisionGroup": self.collision_group
         }
         if self.notes is not None:
             ret["notes"] = self.notes

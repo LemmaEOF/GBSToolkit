@@ -2,9 +2,9 @@ from collections import OrderedDict
 from typing import Dict, Optional
 
 from .cmd_base import Command
-from gbstoolkit.dsl.enums import MoveType
-from gbstoolkit.dsl.marshalling import JsonSafe
-from gbstoolkit.dsl.util import NameUtil, NodeData
+from ..enums import MoveType
+from ..marshalling import JsonSafe
+from ..util import NameUtil, NodeData
 
 class CameraLockCommand(Command):
     @staticmethod

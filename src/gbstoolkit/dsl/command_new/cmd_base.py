@@ -4,8 +4,8 @@ from typing import Dict, List, Optional
 
 from kdl import Node
 
-from gbstoolkit.dsl.marshalling import JsonSafe
-from gbstoolkit.dsl.util import NameUtil, NodeData, command_to_keyword
+from ..marshalling import JsonSafe
+from ..util import NameUtil, NodeData, command_to_keyword
 
 COMMANDS: Dict[str, "Command"] = {}  # Fills in automatically by subclassing Command! woooo
 

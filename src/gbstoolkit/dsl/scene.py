@@ -138,21 +138,21 @@ class Scene(Serializable):
         ret = {
             "id": serialize(self.id),
             "name": self.name,
-            "type": serialize(self.type),
             "backgroundId": serialize(self.background_id),
-            "paletteIds": self.palette_ids,
+            "type": serialize(self.type),
             "x": self.x,
             "y": self.y,
             "width": self.width,
             "height": self.height,
+            "paletteIds": self.palette_ids,
             "actors": serialize(self.actors),
             "triggers": serialize(self.triggers),
-            "collisions": self.collisions,
-            "tileColors": self.tile_colors,
             "script": serialize(self.script),
             "playerHit1Script": serialize(self.player_hit1_script),
             "playerHit2Script": serialize(self.player_hit2_script),
-            "playerHit3Script": serialize(self.player_hit3_script)
+            "playerHit3Script": serialize(self.player_hit3_script),
+            "collisions": self.collisions,
+            "tileColors": self.tile_colors
         }
         if self.notes is not None:
             ret["notes"] = self.notes

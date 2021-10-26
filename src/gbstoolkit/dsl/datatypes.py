@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import Dict, Generic, TypeVar, Union
+from typing import Dict, Generic, Tuple, Type, TypeVar, Union
 from uuid import UUID
 
-from .enums import ActorProperty, Direction
+from .enums import ActorProperty, Direction, SerializableEnum
 from .marshalling import JsonSafe, serialize, Serializable
 from .util import NameUtil
 
@@ -61,7 +61,7 @@ class OwnedProperty(Serializable):
         return names.id_for_actor(split[0]) + ":" + split[1]
 
 
-T = TypeVar("T", int, Serializable)
+T = TypeVar("T", int, Serializable, SerializableEnum)
 
 
 @dataclass
@@ -95,6 +95,8 @@ class UnionArgument(Serializable, Generic[T]):
 
     @staticmethod
     def format(obj: Dict[str, JsonSafe], names: NameUtil) -> Union[str, int]:
+        if "type" not in obj:  # can happen (wheeee), just default to number bc that's Probably Safe
+            return obj["value"]
         if obj["type"] == "variable":
             return "$" + obj["value"] + "$"
         elif obj["type"] == "property":
@@ -103,7 +105,7 @@ class UnionArgument(Serializable, Generic[T]):
             return obj["value"]
 
     @staticmethod
-    def parse(obj: Union[str, int], names: NameUtil) -> Dict[str, JsonSafe]:
+    def parse(obj: Union[str, int], names: NameUtil, arg: Tuple[str, Type[T]] = ("number", int)) -> Dict[str, JsonSafe]:
         if type(obj) == int or type(obj) == float:
             return {"type": "number", "value": int(obj)}
         else:
@@ -112,4 +114,7 @@ class UnionArgument(Serializable, Generic[T]):
             elif ':' in obj:
                 return {"type": "property", "value": OwnedProperty.parse(obj, names)}
             else:
-                return {"type": "direction", "value": Direction.deserialize(obj)}
+                if arg[1] == int:
+                    return {"type": arg[0], "value": int(obj)}
+                else:
+                    return {"type": arg[0], "value": arg[1].deserialize(obj).serialize()}

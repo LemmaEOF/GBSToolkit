@@ -9,7 +9,7 @@ from .event import CustomEvent
 from .marshalling import JsonSafe, serialize, Serializable
 from .palette import Palette
 from .scene import Scene
-from .settings import Settings
+from .settings import Settings, EngineFields
 from .util import NameUtil, ProgressTracker, ProtoEvent, prop_node, map_nodes, sanitize_name
 
 
@@ -157,8 +157,8 @@ class Project(Serializable):
     custom_events: List[CustomEvent]
     music: List[Song]
     variables: Dict[str, str]
+    engine_field_values: EngineFields
     settings: Settings
-    # TODO: engine field values (document, define, parse
 
     def serialize(self) -> JsonSafe:
         ret = {
@@ -173,6 +173,7 @@ class Project(Serializable):
             "customEvents": serialize(self.custom_events),
             "music": serialize(self.music),
             "variables": [{"id": i[0], "name": i[1]} for i in self.variables.items()],
+            "engineFieldValues": serialize(self.engine_field_values),
             "settings": serialize(self.settings)
         }
         if self.notes is not None:
@@ -196,6 +197,7 @@ class Project(Serializable):
             custom_events=[CustomEvent.deserialize(i, obj["customEvents"].index(i)) for i in obj["customEvents"]],
             music=[Song.deserialize(i) for i in obj["music"]],
             variables={i["id"]: i["name"] for i in obj["variables"]},
+            engine_field_values=EngineFields.deserialize(obj["engineFieldValues"]),
             settings=Settings.deserialize(obj["settings"])
         )
 
@@ -227,9 +229,10 @@ class Project(Serializable):
             prop_node("name", self.name),
             prop_node("author", self.author),
             prop_node("version", self.version),
-            prop_node("release", self.release)
+            prop_node("release", self.release),
+            self.engine_field_values.format(),
+            self.settings.format(names)
         ])
-        meta.nodes.append(self.settings.format(names))
         if self.notes is not None:
             meta.nodes.append(prop_node("notes", self.notes))
         docs = {"project": meta}
@@ -253,12 +256,13 @@ class Project(Serializable):
 
     @staticmethod
     def parse(docs: Dict[str, Document], project_root: str, progress: ProgressTracker) -> "Project":
-        meta = map_nodes(docs["project"].nodes)
+        meta = map_nodes(docs["project"].nodes, ["engineFields", "settings"])
         backgrounds = [Background.parse(i) for i in docs["backgrounds"].nodes]
         sprite_sheets = [SpriteSheet.parse(i) for i in docs["sprite-sheets"].nodes]
         music = [Song.parse(i) for i in docs["music"].nodes]
         variables = {i.name[1:-1]: i.args[0] for i in docs["variables"].nodes}
         palettes = [Palette.parse(i) for i in docs["palettes"].nodes]
+        engine_fields = EngineFields.parse([i for i in docs["project"].nodes if i.name == "engineFields"][-1])
         names = ProjectNameUtil()
         for background in backgrounds:
             names.add_background(str(background.id), background.name)
@@ -291,7 +295,7 @@ class Project(Serializable):
                 contents = map_nodes(doc.nodes)
                 names.add_custom_event(contents["id"], sanitize_name(contents["name"], "custom event"), progress)
         # NameUtil should be safe! We can parse stuff using them now~
-        settings = Settings.parse([i for i in docs["project"].nodes if i.name == "settings"][0].nodes, names)
+        settings = Settings.parse([i for i in docs["project"].nodes if i.name == "settings"][-1].nodes, names)
         custom_events: List[Optional[CustomEvent]] = [None for _ in range(len(event_docs))]
         for i in event_docs:
             event = CustomEvent.parse(i, names, progress)
@@ -319,5 +323,6 @@ class Project(Serializable):
             custom_events=custom_events,
             music=music,
             variables=variables,
+            engine_field_values=engine_fields,
             settings=settings
         )
