@@ -15,6 +15,9 @@ setuptools.setup(
     project_urls={
         "Bug Tracker": "https://github.com/LemmaEOF/GBSToolkit/issues"
     },
+    entry_points={
+        "console_scripts": ["gbstoolkit = gbstoolkit:run_cli"]
+    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
