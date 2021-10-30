@@ -120,7 +120,7 @@ class Fallback(Command):
                     if node.props is not None and "__type" in node.props and node.props["__type"] == "list":
                         ret[node.name] = Fallback.parse_list(node.nodes, names)
                     else:
-                        if node.name != "__collapse":  # TODO: keyword for disbaled nodes
+                        if node.name != "__collapse" and node.name != "__comment":
                             ret[node.name] = Fallback.parse(NodeData(OrderedDict(), [], node.nodes), names)
                 else:
                     ret[node.name] = node.args[0]
