@@ -58,8 +58,11 @@ class Event(Serializable):
                     children_list = [i.format(names) for i in v]
                     node_children.append(Node(name=k, nodes=children_list))
         props = data.props
-        if self.args is not None and "__collapse" in self.args:  # TODO: keyword for disbaled nodes
-            props["__collapse"] = self.args["__collapse"]
+        if self.args is not None:
+            if "__collapse" in self.args:
+                props["__collapse"] = self.args["__collapse"]
+            if "__comment" in self.args:
+                props["__comment"] = self.args["__comment"]
         props["__eventid"] = str(self.id)
         if isinstance(self.command, Fallback):
             keyword = self.command.fallback_keyword
@@ -87,8 +90,10 @@ class Event(Serializable):
         if isinstance(command, Fallback):
             progress.flag_missing_command(command.fallback_keyword)
         args = command.parse(NodeData(node.props, node.args, node.nodes), names)
-        if "__collapse" in node.props:  # TODO: keyword for disbaled nodes
+        if "__collapse" in node.props:
             args["__collapse"] = node.props["__collapse"]
+        if "__comment" in node.props:
+            args["__comment"] = node.props["__comment"]
         if command.name() == "EVENT_CALL_CUSTOM_EVENT":
             children = {"script": [Event.deprotofy(i)
                                    for i in names.script_for_custom_event(args["customEventId"])]}
