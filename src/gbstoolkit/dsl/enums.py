@@ -122,6 +122,16 @@ class SceneType(SerializableEnum):  # TODO: swap names in V3!
         return SceneType(obj)
 
 
+class SoundEffectType(SerializableEnum):
+    BEEP = "beep",
+    TONE = "tone",
+    CRASH = "crash"
+
+    @staticmethod
+    def deserialize(obj: str) -> "SoundEffectType":
+        return SoundEffectType(obj)
+
+
 class SpriteSheetType(SerializableEnum):
     STATIC = "static"
     ANIMATED = "animated"

@@ -4,4 +4,5 @@ from .cmd_camera import *
 from .cmd_engine import *
 from .cmd_flowcontrol import *
 from .cmd_misc import *
+from .cmd_scene import *
 from .cmd_text import *

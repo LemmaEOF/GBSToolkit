@@ -8,6 +8,7 @@ from .cmd_base import Command
 from ..marshalling import JsonSafe, serialize
 from ..util import NameUtil, NodeData, format_dialogue, parse_dialogue
 
+
 class MenuCommand(Command):
     @staticmethod
     def name() -> str:

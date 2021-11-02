@@ -517,3 +517,96 @@ class ActorStopUpdateScriptCommand(Command):
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         return {"actorId": names.id_for_actor(data.args[0])}
+
+
+class PlayerBounceCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_PLAYER_BOUNCE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "bounce"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"height": str}  # TODO: enum?
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [args["height"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+           "height": data.args[0]
+        }
+
+
+class PlayerSetSpriteCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_PLAYER_SET_SPRITE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "setPlayerSprite"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"spriteSheetId": UUID, "persist": bool}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict({"persist": args["persist"]}), [names.sprite_for_id(args["spriteSheetId"])])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+            "spriteSheetId": names.id_for_sprite(data.args[0]),
+            "persist": data.props["persist"]
+        }
+
+
+class SpritesHideCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_SPRITES_HIDE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "hideAll"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+class SpritesShowCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_SPRITES_SHOW"
+
+    @staticmethod
+    def keyword() -> str:
+        return "showAll"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None

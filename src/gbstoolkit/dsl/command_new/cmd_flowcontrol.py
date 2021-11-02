@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 from uuid import UUID
 
 from kdl import Node
@@ -592,6 +592,8 @@ class LabelGotoCommand(Command):
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         return {"label": data.args[0]}
 
+
+# TODO: single child so make it a direct child (in event.py)
 class LoopCommand(Command):
     @staticmethod
     def name() -> str:
@@ -600,6 +602,10 @@ class LoopCommand(Command):
     @staticmethod
     def keyword() -> str:
         return "loop"
+
+    @staticmethod
+    def children_names() -> Optional[List[str]]:
+        return ["true"]
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
@@ -612,3 +618,65 @@ class LoopCommand(Command):
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
         return None
+
+
+# oh god oh fuck this is a mess
+class SwitchCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_SWITCH"
+
+    @staticmethod
+    def keyword() -> str:
+        return "switch"
+
+    @staticmethod  # TODO: fill out later this is gonna be *hell*
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    # TODO: THIS MAY END UP DELETING HIDDEN CONTENTS FROM THE JSON! RESEARCH ME ASAP!
+    @staticmethod
+    def format_children_names(args: Optional[Dict[str, JsonSafe]]) -> OrderedDict[str, Tuple[str, NodeData]]:
+        ret = OrderedDict()
+        for i in range(args["choices"]):
+            value = args["value" + str(i)]
+            collapse = args["__collapseCase" + str(i)]
+            props = OrderedDict({"__collapse": True}) if collapse else OrderedDict()
+            ret["true" + str(i)] = ("case", NodeData(props, [value]))
+        if not args["__disableElse"]:
+            collapse = args["__collapseElse"]
+            props = OrderedDict({"__collapse": True}) if collapse else OrderedDict()
+            ret["false"] = ("default", NodeData(props, []))
+        return ret
+
+    @staticmethod
+    def parse_children_names(data: NodeData) -> Dict[str, List[Node]]:
+        ret = {}
+        for i in data.children:
+            if i.name == "case":
+                ret["true" + str(data.children.index(i))] = i.nodes
+            elif i.name == "default":
+                ret["false"] = i.nodes
+        return ret
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), ["$" + args["variable"] + "$"])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"variable": data.args[0][1:-1]}
+        choices = 0
+        has_default = False
+        for i in data.children:
+            if i.name == "case":
+                choices += 1
+                index = data.children.index(i)
+                ret["value" + str(index)] = i.args[0]
+                ret["__collapseCase" + str(index)] = i.props["__collapse"] if "__collapse" in i.props else False
+            elif i.name == "default":
+                has_default = True
+                ret["__collapseElse"] = i.props["__collapse"] if "__collapse" in i.props else False
+        ret["choices"] = choices
+        ret["__disableElse"] = not has_default
+        return ret

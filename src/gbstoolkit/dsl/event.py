@@ -6,7 +6,7 @@ import uuid
 
 from kdl import Node, Document
 
-from .command import Command, Fallback, COMMANDS, KEYWORDS
+from .command_new import Command, Fallback, SwitchCommand, COMMANDS, KEYWORDS
 from .marshalling import JsonSafe, serialize, Serializable
 from .util import NameUtil, NodeData, ProtoEvent, ProgressTracker, ParseError, FormatError, map_nodes, prop_node, keyword_to_command
 
@@ -44,7 +44,13 @@ class Event(Serializable):
         data = self.command.format(self.args, names)
         node_children = data.children if data.children is not None else []
         if self.children is not None and self.command.name != "EVENT_CALL_CUSTOM_EVENT":
-            if data.children is not None and len(data.children) > 0:
+            if isinstance(self.command, SwitchCommand):
+                children_data = SwitchCommand.format_children_names(self.args)
+                for k, v in children_data.items():
+                    children_list = [i.format(names) for i in self.children[k]]
+                    node = Node(name=v[0], props=v[1].props, args=v[1].args, nodes=children_list)
+                    node_children.append(node)
+            elif data.children is not None and len(data.children) > 0:
                 if isinstance(self.command, Fallback):
                     fallback_children = []
                     for k, v in self.children.items():
@@ -54,6 +60,7 @@ class Event(Serializable):
                 else:
                     raise FormatError("event", self, "")
             else:
+                # TODO: special-case for Group and Loop (only one child, ever)
                 for k, v in self.children.items():
                     children_list = [i.format(names) for i in v]
                     node_children.append(Node(name=k, nodes=children_list))
@@ -74,7 +81,11 @@ class Event(Serializable):
     def parse(node: Node, names: NameUtil, progress: ProgressTracker) -> "Event":
         command = KEYWORDS[node.name] if node.name in KEYWORDS else Fallback(keyword_to_command(node.name))
         children = None
-        if len(node.nodes) > 0 and command.children_names() is not None:
+        if isinstance(command, SwitchCommand):
+            child_nodes = SwitchCommand.parse_children_names(NodeData(node.props, node.args, node.nodes))
+            children = {k: [Event.parse(i, names, progress) for i in v] for k, v in child_nodes}
+        elif len(node.nodes) > 0 and command.children_names() is not None:
+            # TODO: special-case for Group and Loop (only one child, ever)
             children = {}
             for child in node.nodes:
                 children[child.name] = [Event.parse(i, names, progress) for i in child.nodes]

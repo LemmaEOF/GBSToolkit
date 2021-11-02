@@ -942,7 +942,7 @@ class GroupCommand(Command):
         return "group"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true"]
 
     @staticmethod
@@ -968,7 +968,7 @@ class IfActorAtPositionCommand(Command):
         return "ifActorAtPosition"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1007,7 +1007,7 @@ class IfActorFacing(Command):
         return "ifActorFacing"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1046,7 +1046,7 @@ class IfActorRelativeTo(Command):
         return "ifActorRelativeTo"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1093,7 +1093,7 @@ class IfColorSupportedCommand(Command):
         return "ifColorSupported"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1132,7 +1132,7 @@ class IfSavedDataCommand(Command):
         return "ifSaveExists"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1171,7 +1171,7 @@ class IfInputCommand(Command):
         return "ifAnyPressed"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1210,7 +1210,7 @@ class IfVariableCompareCommand(Command):
         return "ifCompareVars"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1249,7 +1249,7 @@ class IfVariableFalseCommand(Command):
         return "ifFalse"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1288,7 +1288,7 @@ class IfVariableFlagCompareCommand(Command):
         return "ifFlag"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1327,7 +1327,7 @@ class IfVariableTrueCommand(Command):
         return "ifTrue"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1366,7 +1366,7 @@ class IfValueCompareCommand(Command):
         return "ifValue"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true", "false"]
 
     @staticmethod
@@ -1427,7 +1427,7 @@ class InputScriptRemoveCommand(Command):
         return "removeInputScript"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true"]
 
     @staticmethod
@@ -1453,7 +1453,7 @@ class InputScriptSetCommand(Command):
         return "setInputScript"
 
     @staticmethod
-    def children_names() -> Optional[List[str]]:
+    def cchildren_names(args: Optional[Dict[str, JsonSafe]]) -> Optional[List[str]]:
         return ["true"]
 
     @staticmethod

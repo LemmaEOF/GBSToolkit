@@ -1,13 +1,11 @@
 from collections import OrderedDict
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional
 from uuid import UUID
 
-from kdl import Node
-
 from .cmd_base import Command
-from ..datatypes import ActorID, UnionArgument
-from ..enums import OverlayColor
-from ..marshalling import JsonSafe, serialize
+from ..enums import OverlayColor, SoundEffectType
+from ..marshalling import JsonSafe
+from ..palette import PaletteID
 from ..util import NameUtil, NodeData
 
 
@@ -283,3 +281,134 @@ class OverlayShowCommand(Command):
             "y": data.args[1],
             "color": data.props["color"] if "color" in data.props else "black"
         }
+
+
+class PaletteSetBackgroundCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_PALETTE_SET_BACKGROUND"
+
+    @staticmethod
+    def keyword() -> str:
+        return "setBackgroundPalette"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {
+            "palette0": PaletteID,
+            "palette1": PaletteID,
+            "palette2": PaletteID,
+            "palette3": PaletteID,
+            "palette4": PaletteID,
+            "palette5": PaletteID
+        }
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(),
+                        [names.palette_for_id(args["palette" + str(i)]) if args["palette" + str(i)] != "" else ""
+                         for i in range(6)]
+                        )
+        # kept around in case this list comp doesn't work
+        # return NodeData(OrderedDict(), [
+        #     names.palette_for_id(args["palette0"]) if args["palette0"] != "" else "",
+        #     names.palette_for_id(args["palette1"]) if args["palette1"] != "" else "",
+        #     names.palette_for_id(args["palette2"]) if args["palette2"] != "" else "",
+        #     names.palette_for_id(args["palette3"]) if args["palette3"] != "" else "",
+        #     names.palette_for_id(args["palette4"]) if args["palette4"] != "" else "",
+        #     names.palette_for_id(args["palette5"]) if args["palette5"] != "" else ""
+        # ])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"palette" + str(i): names.id_for_palette(data.args[i]) if data.args[i] != "" else "" for i in range(6)}
+        # kept around in case this dict comp doesn't work
+        # return {
+        #     "palette0": names.id_for_palette(data.args[0]) if data.args[0] != "" else "",
+        #     "palette1": names.id_for_palette(data.args[1]) if data.args[1] != "" else "",
+        #     "palette2": names.id_for_palette(data.args[2]) if data.args[2] != "" else "",
+        #     "palette3": names.id_for_palette(data.args[3]) if data.args[3] != "" else "",
+        #     "palette4": names.id_for_palette(data.args[4]) if data.args[4] != "" else "",
+        #     "palette5": names.id_for_palette(data.args[5]) if data.args[5] != "" else "",
+        # }
+
+
+class PaletteSetUICommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_PALETTE_SET_UI"
+
+    @staticmethod
+    def keyword() -> str:
+        return "setUIPalette"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"palette": PaletteID}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [names.palette_for_id(args["palette"]) if args["palette"] != "" else ""])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+            "palette": names.id_for_palette(data.args[0]) if data.args[0] != "" else ""
+        }
+
+
+class ScriptStopCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_STOP"
+
+    @staticmethod
+    def keyword() -> str:
+        return "stop"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+class SoundPlayEffectCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_SOUND_PLAY_EFFECT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "playSound"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"type": SoundEffectType, "duration": int, "wait": bool}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        props = OrderedDict()
+        if args["type"] == "beep":
+            props["pitch"] = args["pitch"]
+        elif args["type"] == "tone":
+            props["tone"] = args["tone"]
+        props["wait"] = args["wait"]
+        return NodeData(props, [args["type"], args["duration"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        ret = {"type": data.args[0]}
+        if ret["type"] == "beep":
+            ret["pitch"] = data.props["pitch"]
+        elif ret["type"] == "tone":
+            ret["frequency"] = data.props["frequency"]
+        ret["duration"] = data.args[1]
+        ret["wait"] = data.props["wait"]
+        return ret
