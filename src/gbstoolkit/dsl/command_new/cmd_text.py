@@ -46,6 +46,29 @@ class MenuCommand(Command):
         )
         return ret
 
+    
+class TextChoiceCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_CHOICE"
+        
+    @staticmethod
+    def keyword() -> str:
+        return "choice"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"variable": str, "trueText": str, "falseText": str}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), ["$" + args["variable"] + "$", args["trueText"], args["falseText"]])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {"variable": data.args[0][1:-1], "trueText": data.args[1], "falseText": data.args[2]}
+
+
 class TextDialogueCommand(Command):
     @staticmethod
     def name() -> str:
@@ -83,3 +106,37 @@ class TextDialogueCommand(Command):
             return {"avatarId": names.id_for_sprite(avatar_id), "text": text}
         else:
             return {"text": text}
+
+
+class TextSetSpeedCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_TEXT_SET_ANIMATION_SPEED"
+
+    @staticmethod
+    def keyword() -> str:
+        return "setTextSpeed"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {"speedIn": int, "speedOut": int, "speed": int, "allowFastForward": bool}
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(
+            OrderedDict({
+                "boxIn": args["speedIn"],
+                "boxOut": args["speedOut"],
+                "fastForward": args["allowFastForward"]
+            }),
+            [args["speed"]]
+        )
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return {
+            "speedIn": data.props["boxIn"],
+            "speedOut": data.props["boxOut"],
+            "speed": data.args[0],
+            "allowFastForward": data.props["allowFastForward"]
+        }

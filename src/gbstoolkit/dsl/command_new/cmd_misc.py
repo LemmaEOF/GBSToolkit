@@ -412,3 +412,70 @@ class SoundPlayEffectCommand(Command):
         ret["duration"] = data.args[1]
         ret["wait"] = data.props["wait"]
         return ret
+
+
+class TimerDisableCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_TIMER_DISABLE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "disableTimer"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+class TimerRestartCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_TIMER_RESTART"
+
+    @staticmethod
+    def keyword() -> str:
+        return "restartTimer"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
+# TODO: impl
+class TimerSetScriptCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_SET_TIMER_SCRIPT"
+
+    @staticmethod
+    def keyword() -> str:
+        return "setTimerScript"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
