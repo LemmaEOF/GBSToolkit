@@ -62,6 +62,28 @@ class Command(ABC, metaclass=AutoRegister):
         return NotImplemented
 
 
+class EndCommand(Command):  # TODO: good way to strip out of things/append automatically?
+    @staticmethod
+    def name() -> str:
+        return "EVENT_END"
+
+    @staticmethod
+    def keyword() -> str:
+        return "end"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return None
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        return NodeData(OrderedDict(), [])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        return None
+
+
 # TODO: make me use JiK?
 class Fallback(Command):
     def __init__(self, name: str):
@@ -120,7 +142,7 @@ class Fallback(Command):
                     if node.props is not None and "__type" in node.props and node.props["__type"] == "list":
                         ret[node.name] = Fallback.parse_list(node.nodes, names)
                     else:
-                        if node.name != "__collapse" and node.name != "__comment":
+                        if node.name != "__collapse" and node.name != "__comment" and node.name != "__label":
                             ret[node.name] = Fallback.parse(NodeData(OrderedDict(), [], node.nodes), names)
                 else:
                     ret[node.name] = node.args[0]

@@ -154,7 +154,7 @@ class IfActorRelativeTo(Command):
         ret = {
             "actorId": names.id_for_actor(data.args[0]),
             "operation": RelativeActorPosition.parse(data.args[1]),
-            "otherActorId": names.id_for_actor(data.args[1])
+            "otherActorId": names.id_for_actor(data.args[2])
         }
         if "__disableElse" in data.props:
             ret["__disableElse"] = data.props["__disableElse"]

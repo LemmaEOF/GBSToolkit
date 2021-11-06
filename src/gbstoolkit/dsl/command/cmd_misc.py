@@ -1,9 +1,10 @@
 from collections import OrderedDict
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from .cmd_base import Command
-from ..enums import OverlayColor, SoundEffectType
+from ..datatypes import ActorID, UnionArgument
+from ..enums import Direction, OverlayColor, SoundEffectType
 from ..marshalling import JsonSafe
 from ..palette import PaletteID
 from ..util import NameUtil, NodeData
@@ -25,14 +26,14 @@ class CallCustomEventCommand(Command):
     @staticmethod
     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
         if len(args) > 2:
-            props = OrderedDict({})
+            props = OrderedDict()
             for k, v in args.items():
                 if "variable" in k:
                     props["var" + k[10:-2]] = "$" + v + "$"
                 elif "actor" in k:
                     props["actor" + k[7:-2]] = names.actor_for_id(v)
         else:
-            props = None
+            props = OrderedDict()
         return NodeData(props, [names.custom_event_for_id(args["customEventId"])])
 
     @staticmethod
@@ -97,7 +98,7 @@ class DataClearCommand(Command):
 class DataLoadCommand(Command):
     @staticmethod
     def name() -> str:
-        return "EVENT_DATA_LOAD"
+        return "EVENT_LOAD_DATA"
 
     @staticmethod
     def keyword() -> str:
@@ -119,7 +120,7 @@ class DataLoadCommand(Command):
 class DataSaveCommand(Command):
     @staticmethod
     def name() -> str:
-        return "EVENT_DATA_SAVE"
+        return "EVENT_SAVE_DATA"
 
     @staticmethod
     def keyword() -> str:
@@ -138,35 +139,59 @@ class DataSaveCommand(Command):
         return None
 
 
-# TODO: this is hell we live in hell why does this have six args one of which is a list (impl me later)
-# commenting out so it uses fallback for now
-# class LaunchProjectileCommand(Command):
-#     @staticmethod
-#     def name() -> str:
-#         return "EVENT_LAUNCH_PROJECTILE"
-#
-#     @staticmethod
-#     def keyword() -> str:
-#         return "launchProjectile"
-#
-#     @staticmethod
-#     def required_args() -> Optional[Dict[str, type]]:
-#         return {
-#             "spriteSheetId": UUID,
-#             "actorId": ActorID,
-#             "direction": UnionArgument[Direction],
-#             "speed": int,
-#             "collisionGroup": str,
-#             "collisionMask": List[str]
-#         }
-#
-#     @staticmethod
-#     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
-#         pass
-#
-#     @staticmethod
-#     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-#         pass
+class LaunchProjectileCommand(Command):
+    @staticmethod
+    def name() -> str:
+        return "EVENT_LAUNCH_PROJECTILE"
+
+    @staticmethod
+    def keyword() -> str:
+        return "launchProjectile"
+
+    @staticmethod
+    def required_args() -> Optional[Dict[str, type]]:
+        return {
+            "spriteSheetId": UUID,
+            "actorId": ActorID,
+            "direction": UnionArgument[Direction],
+            "speed": int,
+            "collisionGroup": str,
+            "collisionMask": List[str]
+        }
+
+    @staticmethod
+    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
+        props = OrderedDict({
+            "speed": args["speed"],
+            "collision": args["collisionGroup"]
+        })
+        for i in args["collisionMask"]:
+            props["collide" + i.capitalize()] = True
+        return NodeData(props, [
+            names.actor_for_id(args["actorId"]),
+            names.sprite_for_id(args["spriteSheetId"]),
+            UnionArgument.format(args["direction"], names)
+        ])
+
+    @staticmethod
+    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
+        collision_mask = []
+        if "collidePlayer" in data.props:
+            collision_mask.append("player")
+        if "collide1" in data.props:
+            collision_mask.append("1")
+        if "collide2" in data.props:
+            collision_mask.append("2")
+        if "collide3" in data.props:
+            collision_mask.append("3")
+        return {
+            "spriteSheetId": names.id_for_sprite(data.args[1]),
+            "actorId": names.id_for_actor(data.args[0]),
+            "direction": UnionArgument.parse(data.args[2], names, ("direction", Direction)),
+            "speed": data.props["speed"],
+            "collisionGroup": data.props["collision"],
+            "collisionMask": collision_mask
+        }
 
 
 class MusicPlayCommand(Command):
@@ -414,68 +439,53 @@ class SoundPlayEffectCommand(Command):
         return ret
 
 
-class TimerDisableCommand(Command):
+class WeaponAttackCommand(Command):
     @staticmethod
     def name() -> str:
-        return "EVENT_TIMER_DISABLE"
+        return "EVENT_WEAPON_ATTACK"
 
     @staticmethod
     def keyword() -> str:
-        return "disableTimer"
+        return "useWeapon"
 
     @staticmethod
     def required_args() -> Optional[Dict[str, type]]:
-        return None
+        return {
+            "spriteSheetId": UUID,
+            "actorId": ActorID,
+            "offset": int,
+            "collisionGroup": str,
+            "collisionMask": List[str]
+        }
 
     @staticmethod
     def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
-        return NodeData(OrderedDict(), [])
+        props = OrderedDict({
+            "offset": args["offset"]
+        })
+        for i in args["collisionMask"]:
+            props["collide" + i.capitalize()] = True
+        return NodeData(props, [
+            names.actor_for_id(args["actorId"]),
+            names.sprite_for_id(args["spriteSheetId"]),
+            UnionArgument.format(args["direction"], names)
+        ])
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return None
-
-
-class TimerRestartCommand(Command):
-    @staticmethod
-    def name() -> str:
-        return "EVENT_TIMER_RESTART"
-
-    @staticmethod
-    def keyword() -> str:
-        return "restartTimer"
-
-    @staticmethod
-    def required_args() -> Optional[Dict[str, type]]:
-        return None
-
-    @staticmethod
-    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
-        return NodeData(OrderedDict(), [])
-
-    @staticmethod
-    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return None
-
-
-# TODO: impl
-class TimerSetScriptCommand(Command):
-    @staticmethod
-    def name() -> str:
-        return "EVENT_SET_TIMER_SCRIPT"
-
-    @staticmethod
-    def keyword() -> str:
-        return "setTimerScript"
-
-    @staticmethod
-    def required_args() -> Optional[Dict[str, type]]:
-        return None
-
-    @staticmethod
-    def format(args: Optional[Dict[str, JsonSafe]], names: NameUtil) -> NodeData:
-        return NodeData(OrderedDict(), [])
-
-    @staticmethod
-    def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return None
+        collision_mask = []
+        if "collidePlayer" in data.props:
+            collision_mask.append("player")
+        if "collide1" in data.props:
+            collision_mask.append("1")
+        if "collide2" in data.props:
+            collision_mask.append("2")
+        if "collide3" in data.props:
+            collision_mask.append("3")
+        return {
+            "spriteSheetId": names.id_for_sprite(data.args[1]),
+            "actorId": names.id_for_actor(data.args[0]),
+            "direction": UnionArgument.parse(data.args[2], names, ("direction", Direction)),
+            "offset": data.props["offset"],
+            "collisionMask": collision_mask
+        }

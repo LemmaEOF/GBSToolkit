@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 from uuid import UUID
@@ -6,9 +5,9 @@ import uuid
 
 from kdl import Node, Document
 
-from .command_new import Command, Fallback, SwitchCommand, COMMANDS, KEYWORDS
+from .command import Command, Fallback, SwitchCommand, COMMANDS, KEYWORDS
 from .marshalling import JsonSafe, serialize, Serializable
-from .util import NameUtil, NodeData, ProtoEvent, ProgressTracker, ParseError, FormatError, map_nodes, prop_node, keyword_to_command
+from .util import NameUtil, NodeData, ProtoEvent, ProgressTracker, FormatError, map_nodes, prop_node, keyword_to_command
 
 
 @dataclass
@@ -24,7 +23,7 @@ class Event(Serializable):
         else:
             name = self.command.name()
         ret = {"id": serialize(self.id), "command": name}
-        if self.args is not None:
+        if self.args is not None and len(self.args) > 0:
             ret["args"] = serialize(self.args)
         if self.children is not None:
             ret["children"] = serialize(self.children)
@@ -43,7 +42,7 @@ class Event(Serializable):
     def format(self, names: NameUtil) -> Node:
         data = self.command.format(self.args, names)
         node_children = data.children if data.children is not None else []
-        if self.children is not None and self.command.name != "EVENT_CALL_CUSTOM_EVENT":
+        if self.children is not None and self.command.name() != "EVENT_CALL_CUSTOM_EVENT":
             if isinstance(self.command, SwitchCommand):
                 children_data = SwitchCommand.format_children_names(self.args)
                 for k, v in children_data.items():
@@ -60,16 +59,20 @@ class Event(Serializable):
                 else:
                     raise FormatError("event", self, "")
             else:
-                # TODO: special-case for Group and Loop (only one child, ever)
+                # TODO: special-case for Group, Loop, and setTimerScript (only one child, ever)
                 for k, v in self.children.items():
                     children_list = [i.format(names) for i in v]
                     node_children.append(Node(name=k, nodes=children_list))
         props = data.props
+        if props is None:
+            print("Command " + self.command.name() + " is returning None props! This is ILLEGAL!")
         if self.args is not None:
             if "__collapse" in self.args:
                 props["__collapse"] = self.args["__collapse"]
             if "__comment" in self.args:
                 props["__comment"] = self.args["__comment"]
+            if "__label" in self.args:
+                props["__label"] = self.args["__label"]
         props["__eventid"] = str(self.id)
         if isinstance(self.command, Fallback):
             keyword = self.command.fallback_keyword
@@ -85,7 +88,7 @@ class Event(Serializable):
             child_nodes = SwitchCommand.parse_children_names(NodeData(node.props, node.args, node.nodes))
             children = {k: [Event.parse(i, names, progress) for i in v] for k, v in child_nodes}
         elif len(node.nodes) > 0 and command.children_names() is not None:
-            # TODO: special-case for Group and Loop (only one child, ever)
+            # TODO: special-case for Group, Loop, and setTimerScript (only one child, ever)
             children = {}
             for child in node.nodes:
                 children[child.name] = [Event.parse(i, names, progress) for i in child.nodes]
@@ -101,10 +104,14 @@ class Event(Serializable):
         if isinstance(command, Fallback):
             progress.flag_missing_command(command.fallback_keyword)
         args = command.parse(NodeData(node.props, node.args, node.nodes), names)
+        if args is None:
+            args = {}
         if "__collapse" in node.props:
             args["__collapse"] = node.props["__collapse"]
         if "__comment" in node.props:
             args["__comment"] = node.props["__comment"]
+        if "__label" in node.props:
+            args["__label"] = node.props["__label"]
         if command.name() == "EVENT_CALL_CUSTOM_EVENT":
             children = {"script": [Event.deprotofy(i)
                                    for i in names.script_for_custom_event(args["customEventId"])]}

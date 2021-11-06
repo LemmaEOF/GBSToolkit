@@ -7,8 +7,8 @@ import traceback
 
 from kdl import parse
 
-from .dsl.project import Project
-from .dsl.util import serialize, ProgressTracker, QueueProgressTracker
+from dsl.project import Project
+from dsl.util import serialize, ProgressTracker, QueueProgressTracker
 
 
 def format_project(project_file: str, project_root: str, progress: ProgressTracker):

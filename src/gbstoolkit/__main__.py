@@ -1,4 +1,4 @@
-from . import run_cli
+import __init__
 
 if __name__ == "__main__":
-    run_cli()
+    __init__.run_cli()

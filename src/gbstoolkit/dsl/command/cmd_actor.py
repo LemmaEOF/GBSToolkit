@@ -277,7 +277,7 @@ class ActorPushCommand(Command):
 
     @staticmethod
     def parse(data: NodeData, names: NameUtil) -> Optional[Dict[str, JsonSafe]]:
-        return data.props
+        return {"continue": data.props["continue"]}
 
 
 class ActorSetAnimateCommand(Command):

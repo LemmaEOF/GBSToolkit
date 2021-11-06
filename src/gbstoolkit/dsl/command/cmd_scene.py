@@ -101,7 +101,7 @@ class SceneResetStateCommand(Command):
 class SceneSwitchCommand(Command):
     @staticmethod
     def name() -> str:
-        return "EVENT_SCENE_SWITCH"
+        return "EVENT_SWITCH_SCENE"
 
     @staticmethod
     def keyword() -> str:
@@ -127,6 +127,6 @@ class SceneSwitchCommand(Command):
             "sceneId": names.id_for_scene(data.args[0]),
             "x": data.props["x"],
             "y": data.props["y"],
-            "direction": data.props["direction"] if "direction" in props else "",
+            "direction": data.props["direction"] if "direction" in data.props else "",
             "fadeSpeed": data.props["fadeSpeed"]
         }

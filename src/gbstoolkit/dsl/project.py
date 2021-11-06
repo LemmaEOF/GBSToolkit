@@ -85,14 +85,12 @@ class ProjectNameUtil(NameUtil):
     def actor_for_id(self, id: str) -> str:
         if id == "player" or id == "$self$" or id.isdecimal():
             return id
-        # TODO: raise here if illegal name found
-        return NotImplemented
+        raise RuntimeError("Illegal actor ID in custom events: " + id)
 
     def id_for_actor(self, name: str) -> str:
         if name == "player" or name == "$self$" or name.isdecimal():
             return name
-        # TODO: raise here if illegal name found
-        return NotImplemented
+        raise RuntimeError("Illegal actor name in custom events: " + name)
 
     def background_for_id(self, id: str) -> str:
         return self.id_to_background[id]

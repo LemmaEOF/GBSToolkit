@@ -5,8 +5,8 @@ import argparse
 import sys
 import tkinter
 
-from .dsl.util import PrintProgressTracker
-from .projectconverter import Application, format_project, parse_project
+from dsl.util import PrintProgressTracker
+from projectconverter import Application, format_project, parse_project
 
 def run_cli():
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
