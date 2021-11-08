@@ -43,7 +43,7 @@ class Event(Serializable):
         data = self.command.format(self.args, names)
         node_children = data.children if data.children is not None else []
         if self.children is not None and self.command.name() != "EVENT_CALL_CUSTOM_EVENT":
-            if isinstance(self.command, SwitchCommand):
+            if self.command is SwitchCommand:
                 children_data = SwitchCommand.format_children_names(self.args)
                 for k, v in children_data.items():
                     children_list = [i.format(names) for i in self.children[k]]
@@ -84,7 +84,7 @@ class Event(Serializable):
     def parse(node: Node, names: NameUtil, progress: ProgressTracker) -> "Event":
         command = KEYWORDS[node.name] if node.name in KEYWORDS else Fallback(keyword_to_command(node.name))
         children = None
-        if isinstance(command, SwitchCommand):
+        if command is SwitchCommand:
             child_nodes = SwitchCommand.parse_children_names(NodeData(node.props, node.args, node.nodes))
             children = {k: [Event.parse(i, names, progress) for i in v] for k, v in child_nodes}
         elif len(node.nodes) > 0 and command.children_names() is not None:

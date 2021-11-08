@@ -643,7 +643,7 @@ class SwitchCommand(Command):
             collapse = args["__collapseCase" + str(i)]
             props = OrderedDict({"__collapse": True}) if collapse else OrderedDict()
             ret["true" + str(i)] = ("case", NodeData(props, [value]))
-        if not args["__disableElse"]:
+        if "__disableElse" not in args or not args["__disableElse"]:
             collapse = args["__collapseElse"]
             props = OrderedDict({"__collapse": True}) if collapse else OrderedDict()
             ret["false"] = ("default", NodeData(props, []))
