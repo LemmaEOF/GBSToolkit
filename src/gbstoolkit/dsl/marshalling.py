@@ -24,7 +24,7 @@ def serialize(obj: Any) -> JsonSafe:
         return obj
     if type(obj) == float:
         # Check if we can truncate floats!
-        if obj.is_integer:
+        if obj.is_integer():
             return int(obj)
         return obj
     if type(obj) == UUID:
