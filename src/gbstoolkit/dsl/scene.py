@@ -32,10 +32,10 @@ class SceneNameUtil(NameUtil):
             name += "-"
         if name in self.actor_name_counts:
             progress.log_error("Actor name '" + name + "' Already exists in scene '"
-                               + progress.current_scene + "'! Renaming to '" + name + "-"
+                               + progress.current_scene + "'! Renaming to '" + name + " "
                                + str(self.actor_name_counts[name] + 1) + "'!")
             self.actor_name_counts[name] += 1
-            name += "-" + str(self.actor_name_counts[name])
+            name += " " + str(self.actor_name_counts[name])
         else:
             self.actor_name_counts[name] = 1
         self.id_to_actor[id] = name
@@ -44,9 +44,9 @@ class SceneNameUtil(NameUtil):
     def add_trigger(self, id: str, name: str, progress: ProgressTracker):
         if name in self.trigger_name_counts:
             progress.log_error("Trigger name '" + name + "' Already exists in scene '" + progress.current_scene
-                               + "! Renaming to '" + name + "-'!" + str(self.trigger_name_counts[name] + 1))
+                               + "! Renaming to '" + name + " " + str(self.trigger_name_counts[name] + 1) + "'!")
             self.trigger_name_counts[name] += 1
-            name += "-" + str(self.trigger_name_counts[name])
+            name += " " + str(self.trigger_name_counts[name])
         else:
             self.trigger_name_counts[name] = 1
         self.id_to_trigger[id] = name

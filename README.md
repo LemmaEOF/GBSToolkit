@@ -1,24 +1,62 @@
 # GBS Toolkit
- *Various Python tools for messing around with GB Studio projects.*
+ *Python tools for messing around with GB Studio projects.*
  
-GBS Toolkit is a few tools I've built while working on Soul and Silicon, a
+GBS Toolkit is a tool I've built while working on Soul and Silicon, a
 queer/trans dating simulator I'm writing for the GameBoy Color. It's a very
 text-heavy game, and while GB Studio has a dialogue review section, it can't
 always easily handle lots of branching dialogue, and there's no way for it to
-add new dialogue. **This project is a work in progress.**
+add new dialogue.
 
-## Current Features
-- Dump all the dialogue in your project into separate text files for review
-- Dumping and loading variable names to/from a text file
+GBS Toolkit allows you to export the *entirety* of a GB Studio project into a
+collection of files written in [kdl](https://kdl.dev). These files define the
+properties and scripts for every scene, actor, trigger, asset, and more in the
+game, and can be reimported into a GB Studio `.gbsproj` file once you're done
+editing them. **No data should be lost between importing and exporting**, so
+you can edit freely without worrying about having to reimplement things.
 
-## Planned Features
-- Import dialogue in a text file into the project JSON
-- Alternative visual text editor interface with automatic dialogue previews
+The GBS Toolkit project is also set up so that other Python projects can use it
+as a library for interacting with GB Studio project files.
 
 ## Requirements
 - Tested with GB Studio v2.0 beta 5. Other versions may not work properly.
 - Python 3.6 or higher.
-- TaTsu 5.6.1 or higher.
+
+## Installation and Usage
+GBS Toolkit can be used either through the command line or a GUI. There will be
+executable bundles for MacOS and Windows available in
+[Releases](https://github.com/LemmaEOF/GBSToolkit/releases) soon, but as I 
+don't currently have access to an x86 Linux machine, I'm not able to create a
+bundle for it. If  anyone would like to help with that, please let me know!
+
+GBS Toolkit can be installed from PyPI:
+```shell
+pip install gbstoolkit
+```
+
+In order to run the GBS Toolkit GUI from the command line:
+```shell
+gbstoolkit gui
+```
+
+In order to convert a project from a .gbsproj file to kdl:
+```shell
+gbstoolkit format <gbsproj file> <kdl directory>
+```
+
+In order to convert a project from kdl to a .gbsproj file:
+```shell
+gbstoolkit parse <kdl directory> <gbsproj file>
+```
+
+Running a bundled executable will launch the GUI immediately.
+
+## Future Plans
+Currently, **there is no support for custom plugins or engines**. Support is
+planned for future versions, but I'm still figuring out how to write a plugin
+system that doesn't allow for arbitrary code execution.
+
+GBS Toolkit will be updated to support GB Studio v3 once it exits alpha and is
+recommended for games to use.
 
 ## Licensing and Contribution
 Contributions are more than welcome, and GBS Toolkit is publicly available

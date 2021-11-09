@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as file:
 
 setuptools.setup(
     name="GBSToolkit",
-    version="0.1.0",
+    version="1.0.0",
     author="LemmaEOF",
     # author_email= TODO: set up lemmaeof.gay email probs
     description="Various Python tools for messing around with GB Studio projects.",

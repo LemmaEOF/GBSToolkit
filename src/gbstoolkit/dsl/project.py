@@ -39,10 +39,10 @@ class ProjectNameUtil(NameUtil):
 
     def add_custom_event(self, id: str, name: str, progress: ProgressTracker):
         if name in self.custom_event_name_counts:
-            progress.log_error("Custom event name '" + name + "' Already exists! Renaming to `" + name + "-"
+            progress.log_error("Custom event name '" + name + "' Already exists! Renaming to `" + name + " "
                                + str(self.custom_event_name_counts[name] + 1) + "`!")
             self.custom_event_name_counts[name] += 1
-            name += "-" + str(self.custom_event_name_counts[name])
+            name += " " + str(self.custom_event_name_counts[name])
         else:
             self.custom_event_name_counts[name] = 1
         self.id_to_custom_event[id] = name
@@ -54,10 +54,10 @@ class ProjectNameUtil(NameUtil):
 
     def add_palette(self, id: str, name: str, progress: ProgressTracker):
         if name in self.palette_name_counts:
-            progress.log_error("Palette name '" + name + "' Already exists! Renaming to `" + name + "-"
+            progress.log_error("Palette name '" + name + "' Already exists! Renaming to `" + name + " "
                                + str(self.palette_name_counts[name] + 1) + "`!")
             self.palette_name_counts[name] += 1
-            name += "-" + str(self.palette_name_counts[name])
+            name += " " + str(self.palette_name_counts[name])
         else:
             self.palette_name_counts[name] = 1
         self.id_to_palette[id] = name
@@ -65,10 +65,10 @@ class ProjectNameUtil(NameUtil):
 
     def add_scene(self, id: str, name: str, progress: ProgressTracker):
         if name in self.scene_name_counts:
-            progress.log_error("Scene name '" + name + "' Already exists! Renaming to " + name + "-"
+            progress.log_error("Scene name '" + name + "' Already exists! Renaming to " + name + " "
                                + str(self.scene_name_counts[name] + 1))
             self.scene_name_counts[name] += 1
-            name += "-" + str(self.scene_name_counts[name])
+            name += " " + str(self.scene_name_counts[name])
         else:
             self.scene_name_counts[name] = 1
         self.id_to_scene[id] = name
