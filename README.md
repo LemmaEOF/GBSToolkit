@@ -20,6 +20,7 @@ as a library for interacting with GB Studio project files.
 ## Requirements
 - Tested with GB Studio v2.0 beta 5. Other versions may not work properly.
 - Python 3.6 or higher.
+- [kdl-py](https://pypi.org/project/kdl-py/) 1.0.0 or higher.
 
 ## Installation and Usage
 GBS Toolkit can be used either through the command line or a GUI. There will be
