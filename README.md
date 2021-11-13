@@ -1,6 +1,6 @@
 # GBS Toolkit
  *Python tools for messing around with GB Studio projects.*
- 
+
 GBS Toolkit is a tool I've built while working on Soul and Silicon, a
 queer/trans dating simulator I'm writing for the GameBoy Color. It's a very
 text-heavy game, and while GB Studio has a dialogue review section, it can't
@@ -23,12 +23,9 @@ as a library for interacting with GB Studio project files.
 - [kdl-py](https://pypi.org/project/kdl-py/) 1.0.0 or higher.
 
 ## Installation and Usage
-GBS Toolkit can be used either through the command line or a GUI. There will be
-executable bundles for MacOS and Windows available in
-[Releases](https://github.com/LemmaEOF/GBSToolkit/releases) soon, but as I 
-don't currently have access to an x86 Linux machine, I'm not able to create a
-bundle for it. If  anyone would like to help with that, please let me know!
-
+GBS Toolkit can be used either through the command line or a GUI. There are
+executable bundles for MacOS, Windows, and Linux available in
+[Releases](https://github.com/LemmaEOF/GBSToolkit/releases). Otherwise,
 GBS Toolkit can be installed from PyPI:
 ```shell
 pip install gbstoolkit
