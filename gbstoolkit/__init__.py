@@ -10,9 +10,8 @@ import traceback
 
 from kdl import parse
 
-from dsl.project import Project
-from dsl.util import serialize, ProgressTracker, PrintProgressTracker, QueueProgressTracker
-
+from .dsl.project import Project
+from .dsl.util import serialize, ProgressTracker, PrintProgressTracker, QueueProgressTracker
 
 def format_project(project_file: str, project_root: str, progress: ProgressTracker):
     try:
@@ -78,7 +77,8 @@ def format_project(project_file: str, project_root: str, progress: ProgressTrack
 def parse_project(project_file: str, project_root: str, progress: ProgressTracker):
     try:
         progress.set_status("Parsing project metadata and assets")
-        docs = {i.name[:-4]: parse(open(project_root + "/" + i.name, encoding="utf-8").read()) for i in os.scandir(project_root)
+        docs = {i.name[:-4]: parse(open(project_root + "/" + i.name, encoding="utf-8").read()) for i in
+                os.scandir(project_root)
                 if i.is_file() and i.name.endswith(".kdl")}
         project = Project.parse(docs, project_root, progress)
         progress.set_status("Exporting into JSON")
@@ -220,6 +220,12 @@ def run_cli():
             parse_project(args.file, args.dir, PrintProgressTracker())
 
 
+def run_app():
+    root = tkinter.Tk()
+    app = Application(root)
+    app.master.title("GBS Toolkit")
+    app.mainloop()
+
+
 if __name__ == "__main__":
     run_cli()
-    
