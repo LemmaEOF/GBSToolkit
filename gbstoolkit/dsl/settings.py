@@ -12,7 +12,7 @@ from .util import NameUtil, map_nodes, prop_node
 
 @dataclass
 class Settings(Serializable):
-    start_scene_id: UUID
+    start_scene_id: Optional[UUID]
     player_sprite_sheet_id: UUID
     start_x: int
     start_y: int
@@ -48,7 +48,7 @@ class Settings(Serializable):
 
     def serialize(self) -> JsonSafe:
         ret = {
-            "startSceneId": serialize(self.start_scene_id),
+            "startSceneId": serialize(self.start_scene_id) if self.start_scene_id is not None else "",
             "playerSpriteSheetId": serialize(self.player_sprite_sheet_id),
             "startX": self.start_x,
             "startY": self.start_y,
@@ -101,7 +101,7 @@ class Settings(Serializable):
         id_read = obj["playerPaletteId"]
         player_palette_id = UUID(id_read) if len(id_read) == 36 else id_read
         return Settings(
-            start_scene_id=UUID(obj["startSceneId"]),
+            start_scene_id=UUID(obj["startSceneId"]) if obj["startSceneId"] != "" else None,
             player_sprite_sheet_id=UUID(obj["playerSpriteSheetId"]),
             start_x=obj["startX"],
             start_y=obj["startY"],
@@ -121,11 +121,11 @@ class Settings(Serializable):
             player_palette_id=player_palette_id,
             navigator_split_sizes=obj["navigatorSplitSizes"],
             show_navigator=obj["showNavigator"],
-            custom_colors_white=obj["customColorsWhite"],
-            custom_colors_light=obj["customColorsLight"],
-            custom_colors_dark=obj["customColorsDark"],
-            custom_colors_black=obj["customColorsBlack"],
-            cart_type=obj["cartType"] if "carType" in obj else "1B",
+            custom_colors_white=obj["customColorsWhite"] if "customColorsWhite" in obj else "E8F8E0",
+            custom_colors_light=obj["customColorsLight"] if "customColorsLight" in obj else "B0F088",
+            custom_colors_dark=obj["customColorsDark"] if "customColorsDark" in obj else "509878",
+            custom_colors_black=obj["customColorsBlack"] if "customColorsBlack" in obj else "202850",
+            cart_type=obj["cartType"] if "cartType" in obj else "1B",
             custom_controls_up=obj["customControlsUp"] if "customControlsUp" in obj else None,
             custom_controls_down=obj["customControlsDown"] if "customControlsDown" in obj else None,
             custom_controls_left=obj["customControlsLeft"] if "customControlsLeft" in obj else None,
@@ -138,7 +138,7 @@ class Settings(Serializable):
 
     def format(self, names: NameUtil) -> Node:
         nodes = [
-            prop_node("startScene", names.scene_for_id(str(self.start_scene_id))),
+            prop_node("startScene", names.scene_for_id(str(self.start_scene_id)) if self.start_scene_id is not None else None),
             prop_node("playerSpriteSheet", names.sprite_for_id(str(self.player_sprite_sheet_id))),
             prop_node("startX", self.start_x),
             prop_node("startY", self.start_y),
@@ -211,7 +211,7 @@ class Settings(Serializable):
         if len(split_nodes) > 0:
             split_sizes = split_nodes[-1].args
         return Settings(
-            start_scene_id=UUID(names.id_for_scene(contents["startScene"])),
+            start_scene_id=UUID(names.id_for_scene(contents["startScene"])) if contents["startScene"] is not None else None,
             start_x=contents["startX"],
             start_y=contents["startY"],
             start_move_speed=contents["startMoveSpeed"],

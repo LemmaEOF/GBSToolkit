@@ -73,7 +73,7 @@ class Actor(Serializable):
             if "movementType" in obj else AutoMovementType.STATIC,
             direction=Direction.deserialize(obj["direction"]),
             move_speed=obj["moveSpeed"] if "moveSpeed" in obj else 3,
-            anim_speed=obj["animSpeed"] if "moveSpeed" in obj else 3,
+            anim_speed=obj["animSpeed"] if "animSpeed" in obj else 3,
             collision_group=obj["collisionGroup"],
             notes=obj["notes"] if "notes" in obj else None,
             script=[Event.deserialize(i) for i in obj["script"]] if "script" in obj else [],

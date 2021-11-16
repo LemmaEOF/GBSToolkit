@@ -3,7 +3,7 @@
 # https://pyoxidizer.readthedocs.io/en/stable/ for details of this
 # configuration file format.
 
-PROJECT_VERSION = "1.0.0"  # has to be in here because Starlark can't open files, wheee
+PROJECT_VERSION = "1.0.1"  # has to be in here because Starlark can't open files, wheee
 
 # Configuration files consist of functions which define build "targets."
 # This function creates a Python executable and installs it in a destination
