@@ -3,8 +3,7 @@ import setuptools
 with open("README.md", "r", encoding="utf-8") as file:
     long_description = file.read()
 
-with open("semver.txt", "r", encoding="utf-8") as semver:
-    version = semver.read()
+version = "1.0.1"
 
 setuptools.setup(
     name="gbstoolkit",
