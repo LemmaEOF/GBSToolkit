@@ -55,7 +55,7 @@ class Background(Serializable):
             prop_node("imageWidth", self.image_width),
             prop_node("imageHeight", self.image_height),
             prop_node("filename", self.filename),
-            prop_node("timesamp", self.timestamp.timestamp() * 1000)
+            prop_node("timestamp", self.timestamp.timestamp() * 1000)
         ]
         return Node(name=self.name, nodes=nodes)
 

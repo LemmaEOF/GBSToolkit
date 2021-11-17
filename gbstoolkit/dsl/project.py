@@ -283,7 +283,10 @@ class Project(Serializable):
                 if "id" in contents:
                     names.add_scene(contents["id"], i, progress)
         # More chicken-egg hell: have to do a light first pass of custom events to get the IDs into NameUtil too! aaa
-        event_files = [i.name for i in os.scandir(project_root + "/custom-events")]
+        if os.path.exists(project_root + "/custom-events"):
+            event_files = [i.name for i in os.scandir(project_root + "/custom-events")]
+        else:
+            event_files = []
         event_docs = []
         for i in event_files:
             progress.set_status("Parsing custom event '" + i + "'")
