@@ -74,7 +74,7 @@ class Actor(Serializable):
             direction=Direction.deserialize(obj["direction"]),
             move_speed=obj["moveSpeed"] if "moveSpeed" in obj else 3,
             anim_speed=obj["animSpeed"] if "animSpeed" in obj else 3,
-            collision_group=obj["collisionGroup"],
+            collision_group=obj["collisionGroup"] if "collisionGroup" in obj else [],
             notes=obj["notes"] if "notes" in obj else None,
             script=[Event.deserialize(i) for i in obj["script"]] if "script" in obj else [],
             start_script=[Event.deserialize(i) for i in obj["startScript"]] if "startScript" in obj else [],

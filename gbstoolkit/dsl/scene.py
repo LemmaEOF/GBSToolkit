@@ -179,9 +179,9 @@ class Scene(Serializable):
             collisions=obj["collisions"],
             tile_colors=obj["tileColors"] if "tileColors" in obj else [],
             script=[Event.deserialize(i) for i in obj["script"]],
-            player_hit1_script=[Event.deserialize(i) for i in obj["playerHit1Script"]],
-            player_hit2_script=[Event.deserialize(i) for i in obj["playerHit2Script"]],
-            player_hit3_script=[Event.deserialize(i) for i in obj["playerHit3Script"]],
+            player_hit1_script=[Event.deserialize(i) for i in obj["playerHit1Script"]] if "playerHit1Script" in obj else [],
+            player_hit2_script=[Event.deserialize(i) for i in obj["playerHit2Script"]] if "playerHit1Script" in obj else [],
+            player_hit3_script=[Event.deserialize(i) for i in obj["playerHit3Script"]] if "playerHit1Script" in obj else [],
             proj_index=proj_index
         )
 
