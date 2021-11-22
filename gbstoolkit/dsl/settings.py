@@ -98,15 +98,15 @@ class Settings(Serializable):
         default_sprite_palette_id = UUID(id_read) if len(id_read) == 36 else id_read
         id_read = obj["defaultUIPaletteId"]
         default_ui_palette_id = UUID(id_read) if len(id_read) == 36 else id_read
-        id_read = obj["playerPaletteId"] if "playerPaletteId" in obj else []
+        id_read = obj["playerPaletteId"] if "playerPaletteId" in obj else "default-palette-1" # should be the right value
         player_palette_id = UUID(id_read) if len(id_read) == 36 else id_read
         return Settings(
             start_scene_id=UUID(obj["startSceneId"]) if obj["startSceneId"] != "" else None,
             player_sprite_sheet_id=UUID(obj["playerSpriteSheetId"]),
             start_x=obj["startX"],
             start_y=obj["startY"],
-            start_move_speed=obj["startMoveSpeed"] if "startMoveSpeed" in obj else [],
-            start_anim_speed=obj["startAnimSpeed"] if "startAnimSpeed" in obj else [],
+            start_move_speed=obj["startMoveSpeed"] if "startMoveSpeed" in obj else 3,
+            start_anim_speed=obj["startAnimSpeed"] if "startAnimSpeed" in obj else 3,
             start_direction=Direction.deserialize(obj["startDirection"]),
             show_collisions=obj["showCollisions"],
             show_connections=obj["showConnections"],
@@ -114,13 +114,13 @@ class Settings(Serializable):
             world_scroll_y=obj["worldScrollY"],
             zoom=obj["zoom"],
             custom_colors_enabled=obj["customColorsEnabled"],
-            custom_head=obj["customHead"] if "customHead" in obj else [],
+            custom_head=obj["customHead"] if "customHead" in obj else "",
             default_background_palette_ids=[UUID(i) if len(i) == 36 else i for i in obj["defaultBackgroundPaletteIds"]],
             default_sprite_palette_id=default_sprite_palette_id,
             default_ui_palette_id=default_ui_palette_id,
             player_palette_id=player_palette_id,
-            navigator_split_sizes=obj["navigatorSplitSizes"] if "navigatorSplitSizes" in obj else [],
-            show_navigator=obj["showNavigator"] if "showNavigator" in obj else [],
+            navigator_split_sizes=obj["navigatorSplitSizes"] if "navigatorSplitSizes" in obj else [205, 205, 546],
+            show_navigator=obj["showNavigator"] if "showNavigator" in obj else True,
             custom_colors_white=obj["customColorsWhite"] if "customColorsWhite" in obj else "E8F8E0",
             custom_colors_light=obj["customColorsLight"] if "customColorsLight" in obj else "B0F088",
             custom_colors_dark=obj["customColorsDark"] if "customColorsDark" in obj else "509878",

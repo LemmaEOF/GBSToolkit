@@ -195,7 +195,9 @@ class Project(Serializable):
             custom_events=[CustomEvent.deserialize(i, obj["customEvents"].index(i)) for i in obj["customEvents"]],
             music=[Song.deserialize(i) for i in obj["music"]],
             variables={i["id"]: i["name"] for i in obj["variables"]},
-            engine_field_values=EngineFields.deserialize(obj["engineFieldValues"]) if "engineFieldValues" in obj else [],
+            engine_field_values=EngineFields.deserialize(obj["engineFieldValues"]) if "engineFieldValues" in obj else EngineFields(
+                None, None, None, None, None, None, None, None, None, None, None, None
+            ),
             settings=Settings.deserialize(obj["settings"])
         )
 
